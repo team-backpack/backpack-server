@@ -6,7 +6,7 @@ from uuid import uuid4
 
 class ModelMeta(type):
     def __new__(cls, name, bases, dct):
-        if name == 'Model':
+        if name == "Model":
             return super().__new__(cls, name, bases, dct)
 
         fields = {}
@@ -14,16 +14,16 @@ class ModelMeta(type):
             if isinstance(v, Field):
                 if not v.column:
                     v.column = k
-
                 fields[k] = v
 
         dct["__fields__"] = fields
-        dct["__tablename__"] = dct.get("__tablename__", name.lower())
+        dct["__tablename__"] = dct.get("__tablename__", name)
 
         cls_instance = super().__new__(cls, name, bases, dct)
         cls_instance._cached_fields = fields
 
         return cls_instance
+
 
 class Model(metaclass=ModelMeta):
 
@@ -54,11 +54,10 @@ class Model(metaclass=ModelMeta):
 
     def __getattr__(self, name):
         if name in self.__fields__ and isinstance(self.__fields__[name].mapped, Model):
-            foreign_key_field = self.__fields__[name].foreign_key.field
+            foreign_key_field = self.__fields__[name].foreign_key.references
             related_class = self.__fields__[name].mapped
             return related_class.find_one({foreign_key_field: getattr(self, name)})
         raise AttributeError(f"{name} not found")
-
 
     @classmethod
     def _build_where_clause(self, where: dict):
@@ -142,7 +141,7 @@ class Model(metaclass=ModelMeta):
 
         sql = f"""
             UPDATE {self.__tablename__}
-            SET {", ".join([f"{key} = %s" for key in self.__fields__.keys() if not self.__fields__[key].primary_key])}
+            SET {", ".join([f"{field.column} = %s" for field in self.__fields__.values() if not field.primary_key])}
             WHERE {next(field.column for field in self.__fields__.values() if field.primary_key)} = %s
         """
 
@@ -218,10 +217,22 @@ class String(MappedType):
 class Date(MappedType):
     type = date
     name = "DATE"
+    
+    @staticmethod
+    def today():
+        return date.today()
+    
+    @staticmethod
+    def of(day: int, month: int, year: int):
+        return date(year, month, day)
 
 class DateTime(MappedType):
     type = datetime
     name = "DATETIME"
+    
+    @staticmethod
+    def now():
+        return datetime.now()
 
 class Boolean(MappedType):
     type = bool
@@ -229,8 +240,8 @@ class Boolean(MappedType):
 
 class ForeignKey:
 
-    def __init__(self, field: str, type: MappedType):
-        self.field = field
+    def __init__(self, references: str, type: MappedType):
+        self.references = references
         self.type = type
 
 class Field:
@@ -260,7 +271,7 @@ class Field:
         auto_increment = "AUTO_INCREMENT" if self.generator == GenerationStrategy.INCREMENT else ""
         primary_key = "PRIMARY KEY" if self.primary_key else ""
         foreign_key = (
-            f", FOREIGN KEY ({self.column}) REFERENCES {self.mapped.__tablename__}({self.foreign_key.field}) ON DELETE CASCADE"
+            f", FOREIGN KEY ({self.column}) REFERENCES {self.mapped.__tablename__}({self.foreign_key.references}) ON DELETE CASCADE"
             if self.foreign_key
             else ""
         )
