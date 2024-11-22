@@ -1,15 +1,26 @@
-from backpack.db import orm
+from backpack.db.orm.model import table, Model
+from backpack.db.orm.field import Field, GenerationStrategy
+from backpack.db.orm.types import String, Date, DateTime, Boolean
 
-@orm.table("User")
-class User(orm.Model):
+@table("User")
+class User(Model):
 
-    id = orm.Field(orm.String, column="userId", primary_key=True, generator=orm.GenerationStrategy.UUID)
-    username: str = orm.Field(orm.String(25), required=True, unique=True)
-    display_name = orm.Field(orm.String(50), column="displayName")
-    email = orm.Field(orm.String(50), required=True, unique=True)
-    password = orm.Field(orm.String, required=True)
-    birth_date = orm.Field(orm.Date, column="birthDate", required=True)
-    verification_token = orm.Field(orm.String, column="verificationToken")
-    verified = orm.Field(orm.Boolean, required=True, default=False)
-    created_at = orm.Field(orm.DateTime, column="createdAt", required=True, default=orm.DateTime.now())
-    updated_at = orm.Field(orm.DateTime, column="updatedAt", required=True, default=orm.DateTime.now())
+    id = Field(String, column="userId", primary_key=True, generator=GenerationStrategy.UUID)
+    username = Field(String(25), required=True, unique=True)
+    display_name = Field(String(50), column="displayName")
+    email = Field(String(50), required=True, unique=True)
+    password = Field(String, required=True)
+    birth_date = Field(Date, column="birthDate", required=True)
+    verification_token = Field(String, column="verificationToken")
+    verified = Field(Boolean, required=True, default=False)
+    created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
+    updated_at = Field(DateTime, column="updatedAt", required=True, default=DateTime.now())
+
+    def __init__(self, 
+        username: String = None,
+        display_name: String = None,
+        email: String = None,
+        password: String = None,
+        birth_date: Date = None,
+    ):
+        super().__init__(username=username, display_name=display_name, email=email, password=password, birth_date=birth_date)
