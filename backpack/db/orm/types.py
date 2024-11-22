@@ -1,10 +1,7 @@
-from typing import TypeVar
 from datetime import date, datetime
 
-T = TypeVar("T", int, float, str, date, datetime)
-
 class MappedType:
-    type: T = None
+    type = None
     name = ""
 
 class Integer(MappedType, int):
