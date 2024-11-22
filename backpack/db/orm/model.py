@@ -118,7 +118,7 @@ class Model(metaclass=ModelMeta):
         with create_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 cursor.execute(sql, params)
-                return self.__generate_model(cursor.fetchone())
+                return self._generate_model(cursor.fetchone())
 
     @classmethod         
     def find_all(self, **where):
@@ -132,7 +132,7 @@ class Model(metaclass=ModelMeta):
         with create_connection() as conn:
             with conn.cursor(dictionary=True) as cursor:
                 cursor.execute(sql, params)
-                return [self.__generate_model(model) for model in cursor.fetchall()]
+                return [self._generate_model(model) for model in cursor.fetchall()]
 
     def update(self):
         params = [getattr(self, key).id if isinstance(getattr(self, key), Model) else getattr(self, key) for key in self.__fields__.keys() if not self.__fields__[key].primary_key]
@@ -165,7 +165,7 @@ class Model(metaclass=ModelMeta):
                 conn.commit()
 
     @classmethod
-    def __generate_model(cls, result: dict):
+    def _generate_model(cls, result: dict):
         if not result:
             return None
         instance = cls()
@@ -178,6 +178,59 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(instance, field_name, value)
         return instance
+    
+    @classmethod
+    def select(self):
+        query_parts = {
+            "select": f"SELECT * FROM {self.__tablename__}",
+            "where": "",
+            "order_by": "",
+            "join": "",
+            "limit": ""
+        }
+        params = []
+
+        class QueryBuilder:
+            def __init__(self, model: Model):
+                self.model = model
+
+            def where(self, **conditions):
+                clause, where_params = self.model._build_where_clause(conditions)
+                query_parts["where"] = f"WHERE {clause}" if clause else ""
+                params.extend(where_params)
+                return self
+
+            def order_by(self, *columns, descending=False):
+                fields = {k: v.column for k, v in self.model.__fields__.items()}
+                valid_columns = [fields[col] for col in columns if col in fields]
+                if valid_columns:
+                    direction = "DESC" if descending else "ASC"
+                    query_parts["order_by"] = f"ORDER BY {', '.join(valid_columns)} {direction}"
+                return self
+
+            def join(self, related_class, on_field, to_field):
+                related_table = related_class.__tablename__
+                on_column = self.model.__fields__[on_field].column
+                to_column = related_class.__fields__[to_field].column
+                query_parts["join"] += f" JOIN {related_table} ON {self.model.__tablename__}.{on_column} = {related_table}.{to_column}"
+                return self
+
+            def execute(self, limit: int = None):
+                if limit:
+                    query_parts["limit"] = f"LIMIT {limit}"
+
+                query = " ".join(part for part in query_parts.values() if part)
+                with create_connection() as conn:
+                    with conn.cursor(dictionary=True) as cursor:
+                        cursor.execute(query, tuple(params))
+                        return self.model._generate_model(cursor.fetchone()) \
+                                if limit == 1 \
+                                else [self.model._generate_model(row) for row in cursor.fetchall()]
+
+            def one(self):
+                return self.execute(limit=1)
+
+        return QueryBuilder(self)
     
     def __str__(self):
         return f"{self.__class__.__name__} ({", ".join(f'{field}: {getattr(self, field)}' for field in self.__fields__.keys())})"
