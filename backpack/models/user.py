@@ -1,5 +1,4 @@
-from backpack.db.orm.model import table, Model
-from backpack.db.orm.field import Field, GenerationStrategy
+from backpack.db.orm.model import table, Model, Field, GenerationStrategy
 from backpack.db.orm.types import String, Date, DateTime, Boolean
 
 @table("User")
@@ -24,3 +23,5 @@ class User(Model):
         birth_date: Date = None,
     ):
         super().__init__(username=username, display_name=display_name, email=email, password=password, birth_date=birth_date)
+
+print(User.select().where(id="62b5d10f-0f9b-48a7-934c-9e599a3828c7").one())
