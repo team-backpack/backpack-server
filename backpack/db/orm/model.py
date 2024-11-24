@@ -65,7 +65,7 @@ class Model(metaclass=ModelMeta):
         valid_keys = [key for key in where.keys() if key in fields]
         valid_columns = [fields[key] for key in valid_keys]
         clause = " AND ".join([f"{key} = %s" for key in valid_columns])
-        params = [where[key] for key in valid_keys]
+        params = [where[key] if issubclass(type(where[key]), MappedType) else where[key].id for key in valid_keys]
         return clause, params
 
     @property
@@ -173,7 +173,9 @@ class Model(metaclass=ModelMeta):
         instance = cls()
         for column, value in result.items():
             field_name = next((k for k, v in cls.__fields__.items() if v.column == column), None)
-            if cls.__fields__[field_name].foreign_key:
+            if not field_name:
+                continue
+            if cls.__fields__.get(field_name).foreign_key:
                 primary_key_name = next(name for name, field in cls.__fields__[field_name].mapped.__fields__.items() if field.primary_key)
                 fk = cls.__fields__[field_name].mapped.find_one(where={ primary_key_name: value })
                 setattr(instance, field_name, fk)
@@ -195,6 +197,7 @@ class Model(metaclass=ModelMeta):
         class QueryBuilder:
             def __init__(self, model: Model):
                 self.model = model
+                self.related_model: Model = None
 
             def where(self, **conditions):
                 clause, where_params = self.model._build_where_clause(conditions)
@@ -210,11 +213,12 @@ class Model(metaclass=ModelMeta):
                     query_parts["order_by"] = f"ORDER BY {', '.join(valid_columns)} {direction}"
                 return self
 
-            def join(self, related_class, on_field, to_field):
-                related_table = related_class.__tablename__
+            def join(self, related_model: Model, on_field: str, to_field: str):
+                self.related_model = related_model
+                related_table = related_model.__tablename__
                 on_column = self.model.__fields__[on_field].column
-                to_column = related_class.__fields__[to_field].column
-                query_parts["join"] += f" JOIN {related_table} ON {self.model.__tablename__}.{on_column} = {related_table}.{to_column}"
+                to_column = related_model.__fields__[to_field].column
+                query_parts["join"] += f" INNER JOIN {related_table} ON {self.model.__tablename__}.{on_column} = {related_table}.{to_column}"
                 return self
 
             def execute(self, limit: int = None):
@@ -227,7 +231,7 @@ class Model(metaclass=ModelMeta):
                         cursor.execute(query, tuple(params))
                         return self.model._generate_model(cursor.fetchone()) \
                                 if limit == 1 \
-                                else [self.model._generate_model(row) for row in cursor.fetchall()]
+                                else [self.model._generate_model(row) if not self.related_model else (self.model._generate_model(row), self.related_model._generate_model(row)) for row in cursor.fetchall()]
 
             def one(self):
                 return self.execute(limit=1)
