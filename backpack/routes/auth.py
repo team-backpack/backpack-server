@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-import bcrypt
 from datetime import date
 from backpack.models.user import User
+from backpack.utils.hashing import hash, check
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -33,9 +33,3 @@ def register():
             return jsonify({ "id": new_user.id }), 201
         except:
             return jsonify({ "error": "Internal Server Error" }), 500
-        
-def hash(senha: str):
-    return bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
-
-def check(senha: str, hashed: str):
-    return bcrypt.checkpw(senha.encode(), hashed.encode())
