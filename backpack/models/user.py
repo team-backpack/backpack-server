@@ -1,5 +1,6 @@
 from backpack.db.orm.model import table, Model, Field, GenerationStrategy
 from backpack.db.orm.types import String, Date, DateTime, Boolean
+from backpack.utils.token import token
 
 @table("User")
 class User(Model):
@@ -10,6 +11,7 @@ class User(Model):
     password = Field(String, required=True)
     birth_date = Field(Date, column="birthDate", required=True)
     verification_token = Field(String, column="verificationToken")
+    token_sent_at = Field(DateTime, column="tokenSentAt", required=True, default=DateTime.now())
     verified = Field(Boolean, required=True, default=False)
     created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
     updated_at = Field(DateTime, column="updatedAt", required=True, default=DateTime.now())
@@ -21,3 +23,9 @@ class User(Model):
         birth_date: Date = None,
     ):
         super().__init__(username=username, email=email, password=password, birth_date=birth_date)
+
+    def generate_verification_token(self):
+        self.verification_token = token()
+        self.token_sent_at = DateTime.now()
+
+        return self.verification_token
