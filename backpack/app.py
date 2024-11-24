@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, jsonify
+from flask import Flask, Blueprint
 from backpack.routes import auth
 
 app = Flask(__name__)

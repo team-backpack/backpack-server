@@ -65,7 +65,7 @@ class Model(metaclass=ModelMeta):
         valid_keys = [key for key in where.keys() if key in fields]
         valid_columns = [fields[key] for key in valid_keys]
         clause = " AND ".join([f"{key} = %s" for key in valid_columns])
-        params = [where[key] if issubclass(type(where[key]), MappedType) else where[key].id for key in valid_keys]
+        params = [where[key].id if issubclass(type(where[key]), Model) else where[key] for key in valid_keys]
         return clause, params
 
     @property
@@ -84,6 +84,8 @@ class Model(metaclass=ModelMeta):
                 conn.commit()
 
     def insert(self):
+        self.create_table()
+
         params = []
         for name in self.__fields__.keys():
             value = getattr(self, name, None)
@@ -109,6 +111,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def find_one(self, **where):
+        self.create_table()
+
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -124,6 +128,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod         
     def find_all(self, **where):
+        self.create_table()
+
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -137,6 +143,8 @@ class Model(metaclass=ModelMeta):
                 return [self._generate_model(model) for model in cursor.fetchall()]
 
     def update(self):
+        self.create_table()
+
         params = [getattr(self, key).id if isinstance(getattr(self, key), Model) else getattr(self, key) for key in self.__fields__.keys() if not self.__fields__[key].primary_key]
 
         sql = f"""
@@ -154,6 +162,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def delete(self, **where):
+        self.create_table()
+        
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
