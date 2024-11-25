@@ -8,6 +8,7 @@ DB_USER: str = os.getenv("DB_USER")
 DB_PASSWORD: str = os.getenv("DB_PASSWORD")
 DB_NAME: str = os.getenv("DB_NAME")
 EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD")
+JWT_SECRET: str = os.getenv("JWT_SECRET")
 
 if not DB_HOST:
     DB_HOST = "localhost"

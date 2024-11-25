@@ -3,6 +3,8 @@ from datetime import date, datetime
 from backpack.models.user import User
 from backpack.utils.hashing import hash, check
 from backpack.utils.emailing import send_token
+from backpack.utils.jwt import generate_jwt, JWT_EXPIRATION_IN_HOURS
+from config import JWT_SECRET
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -10,11 +12,13 @@ bp = Blueprint("auth", __name__, url_prefix="/auth")
 def register():
     
     if request.method == "POST":
-        username = request.get_json().get("username")
-        email = request.get_json().get("email")
-        password = request.get_json().get("password")
-        confirmed_password = request.get_json().get("confirmedPassword")
-        birth_date = request.get_json().get("birthDate")
+        data = request.get_json()
+        
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+        confirmed_password = data.get("confirmedPassword")
+        birth_date = data.get("birthDate")
 
         if not all((username, email, password, confirmed_password, birth_date)):
             return jsonify({"error": "Missing fields"}), 400
@@ -48,8 +52,14 @@ def register():
             new_user.insert()
 
             send_token(new_user.email, verification_token)
+                
+            payload = {
+                "id": new_user.id,
+                "username": new_user.username
+            }
+            token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
             
-            return jsonify({ "id": new_user.id }), 201
+            return jsonify({ "id": new_user.id, "token": token }), 201
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
