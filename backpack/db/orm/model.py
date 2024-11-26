@@ -26,7 +26,7 @@ class ModelMeta(type):
 
 
 def ensure_table_exists(method):
-    def wrapper(self: Model, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         self.create_table()
         return method(self, *args, **kwargs)
     return wrapper
@@ -254,7 +254,8 @@ class Model(metaclass=ModelMeta):
         return QueryBuilder(self)
     
     def __str__(self):
-        return f"{self.__class__.__name__} ({", ".join(f'{field}: {getattr(self, field)}' for field in self.__fields__.keys())})"
+        att = ", ".join(f'{field}: {getattr(self, field)}' for field in self.__fields__.keys())
+        return f"{self.__class__.__name__} ({att})"
 
 def table(name: str):
     def wrapper(cls):
@@ -310,4 +311,5 @@ class Field:
         return " ".join(filter(None, [self.mapped.name if not self.foreign_key else self.foreign_key.type.name, not_null, unique, default, auto_increment, primary_key, foreign_key]))
     
     def __str__(self):
-        return f"{self.__class__.__name__} ({", ".join(f"{key}: {value}" for key, value in self.__dict__.items())})"
+        att = ", ".join(f"{key}: {value}" for key, value in self.__dict__.items())
+        return f"{self.__class__.__name__} ({att})"
