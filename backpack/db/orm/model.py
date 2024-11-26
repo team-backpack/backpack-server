@@ -25,6 +25,13 @@ class ModelMeta(type):
         return cls_instance
 
 
+def ensure_table_exists(method):
+    def wrapper(self: Model, *args, **kwargs):
+        self.create_table()
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
 class Model(metaclass=ModelMeta):
 
     def __init__(self, **args):
@@ -83,9 +90,8 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(query)
                 conn.commit()
 
+    @ensure_table_exists
     def insert(self):
-        self.create_table()
-
         params = []
         for name in self.__fields__.keys():
             value = getattr(self, name, None)
@@ -109,10 +115,9 @@ class Model(metaclass=ModelMeta):
                     setattr(self, primary_key.column, cursor.lastrowid)
                 conn.commit()
 
+    @ensure_table_exists
     @classmethod
     def find_one(self, **where):
-        self.create_table()
-
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -126,10 +131,9 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, params)
                 return self._generate_model(cursor.fetchone())
 
+    @ensure_table_exists
     @classmethod         
     def find_all(self, **where):
-        self.create_table()
-
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -142,9 +146,8 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, params)
                 return [self._generate_model(model) for model in cursor.fetchall()]
 
+    @ensure_table_exists
     def update(self):
-        self.create_table()
-
         params = [getattr(self, key).id if isinstance(getattr(self, key), Model) else getattr(self, key) for key in self.__fields__.keys() if not self.__fields__[key].primary_key]
 
         sql = f"""
@@ -160,6 +163,7 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, tuple(params))
                 conn.commit()
 
+    @ensure_table_exists
     @classmethod
     def delete(self, **where):
         self.create_table()
@@ -193,6 +197,7 @@ class Model(metaclass=ModelMeta):
                 setattr(instance, field_name, value)
         return instance
     
+    @ensure_table_exists
     @classmethod
     def select(self):
         query_parts = {
