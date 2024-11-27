@@ -8,7 +8,7 @@ smtp_server = "smtp.gmail.com"
 from_email = "social.backpack.bp@gmail.com"
 password = EMAIL_PASSWORD
 
-def send(to: str = "", subject: str = "", body: str = ""):
+def send_email(to: str = "", subject: str = "", body: str = ""):
 
     message = MIMEMultipart()
     message["From"] = from_email
@@ -22,9 +22,9 @@ def send(to: str = "", subject: str = "", body: str = ""):
         server.sendmail(from_email, to, message.as_string())
 
 
-def send_token(email: str, token: str = ""):
+def send_verification_token_to_email(email: str, token: str = ""):
     with open("backpack/templates/token.html", mode="r", encoding="UTF-8") as file:
         body = file.read()
         body = body.format(token)
 
-        send(to=email, subject="Seja bem-vindo ao Backpack, aventureiro!", body=body)
+        send_email(to=email, subject="Seja bem-vindo ao Backpack, aventureiro!", body=body)

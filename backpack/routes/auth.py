@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import date, datetime
 from backpack.models.user import User
 from backpack.utils.hashing import hash, check
-from backpack.utils.emailing import send_token
+from backpack.utils.emailing import send_verification_token_to_email
 from backpack.utils.jwt import generate_jwt, JWT_EXPIRATION_IN_HOURS
 from config import JWT_SECRET
 
@@ -51,7 +51,7 @@ def register():
 
             new_user.insert()
 
-            send_token(new_user.email, verification_token)
+            send_verification_token_to_email(new_user.email, verification_token)
                 
             payload = {
                 "id": new_user.id,
@@ -80,7 +80,7 @@ def verify():
             if user.verification_token != verification_token:
                 return jsonify({ "error": "Invalid token" }), 400
             
-            if is_token_expired(user.token_sent_at):
+            if is_verification_token_expired(user.token_sent_at):
                 return jsonify({ "error": "Expired token" }), 400
             
             user.verified = True
@@ -110,13 +110,13 @@ def resend_token():
             verification_token = user.generate_verification_token()
             user.update()
 
-            send_token(user.email, verification_token)
+            send_verification_token_to_email(user.email, verification_token)
             
             return 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
 
-def is_token_expired(token_sent_at: datetime):
+def is_verification_token_expired(token_sent_at: datetime):
     expiration_time_in_seconds = 5 * 60
     return (datetime.now() - token_sent_at).total_seconds() > expiration_time_in_seconds
