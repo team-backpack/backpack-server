@@ -86,7 +86,7 @@ def verify():
             user.verified = True
             user.update()
             
-            return 200
+            return jsonify({}), 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500

@@ -9,15 +9,3 @@ DB_PASSWORD: str = os.getenv("DB_PASSWORD")
 DB_NAME: str = os.getenv("DB_NAME")
 EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD")
 JWT_SECRET: str = os.getenv("JWT_SECRET")
-
-if not DB_HOST:
-    DB_HOST = "localhost"
-
-if not DB_USER:
-    DB_USER = "estudante1"
-
-if not DB_PASSWORD:
-    DB_PASSWORD = "estudante1"
-
-if not DB_NAME:
-    DB_NAME = "backpack"

@@ -25,13 +25,6 @@ class ModelMeta(type):
         return cls_instance
 
 
-def ensure_table_exists(method):
-    def wrapper(self, *args, **kwargs):
-        self.create_table()
-        return method(self, *args, **kwargs)
-    return wrapper
-
-
 class Model(metaclass=ModelMeta):
 
     def __init__(self, **args):
@@ -84,14 +77,15 @@ class Model(metaclass=ModelMeta):
     def create_table(self):
         fields = [f"{field.column} {field.sqlize()}" for _, field in self.__fields__.items()]
         query = f"CREATE TABLE IF NOT EXISTS {self.__tablename__} ({', '.join(fields)});"
-
+        print(query)
         with create_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query)
                 conn.commit()
 
-    @ensure_table_exists
     def insert(self):
+        self.create_table()
+        
         params = []
         for name in self.__fields__.keys():
             value = getattr(self, name, None)
@@ -115,9 +109,10 @@ class Model(metaclass=ModelMeta):
                     setattr(self, primary_key.column, cursor.lastrowid)
                 conn.commit()
 
-    @ensure_table_exists
     @classmethod
     def find_one(self, **where):
+        self.create_table()
+
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -131,9 +126,10 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, params)
                 return self._generate_model(cursor.fetchone())
 
-    @ensure_table_exists
     @classmethod         
     def find_all(self, **where):
+        self.create_table()
+
         where_clause, params = self._build_where_clause(where)
 
         sql = f"""
@@ -146,7 +142,6 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, params)
                 return [self._generate_model(model) for model in cursor.fetchall()]
 
-    @ensure_table_exists
     def update(self):
         params = [getattr(self, key).id if isinstance(getattr(self, key), Model) else getattr(self, key) for key in self.__fields__.keys() if not self.__fields__[key].primary_key]
 
@@ -163,7 +158,6 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(sql, tuple(params))
                 conn.commit()
 
-    @ensure_table_exists
     @classmethod
     def delete(self, **where):
         self.create_table()
@@ -197,9 +191,10 @@ class Model(metaclass=ModelMeta):
                 setattr(instance, field_name, value)
         return instance
     
-    @ensure_table_exists
     @classmethod
     def select(self):
+        self.create_table()
+
         query_parts = {
             "select": f"SELECT * FROM {self.__tablename__}",
             "where": "",
@@ -291,15 +286,15 @@ class Field:
     def sqlize(self):
         not_null = "NOT NULL" if self.required else ""
         unique = "UNIQUE" if self.unique else ""
-        default = (
-            f"DEFAULT {self.default}"
-            if self.default and not isinstance(self.default, (date, datetime))
-            else "DEFAULT CURRENT_DATE()"
-            if isinstance(self.default, date)
-            else "DEFAULT CURRENT_TIMESTAMP"
-            if isinstance(self.default, datetime)
-            else ""
-        )
+
+        default = ""
+        if self.default and not isinstance(self.default, (date, datetime)):
+            default = f"DEFAULT {self.default}"
+        elif isinstance(self.default, datetime):
+            default = "DEFAULT CURRENT_TIMESTAMP"
+        elif isinstance(self.default, date):
+            default = "DEFAULT CURRENT_DATE"
+
         auto_increment = "AUTO_INCREMENT" if self.generator == GenerationStrategy.INCREMENT else ""
         primary_key = "PRIMARY KEY" if self.primary_key else ""
         foreign_key = (
