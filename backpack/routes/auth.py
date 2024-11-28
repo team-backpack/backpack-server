@@ -1,12 +1,47 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from datetime import date, datetime
 from backpack.models.user import User
-from backpack.utils.hashing import hash, check
+from backpack.utils import hashing
 from backpack.utils.emailing import send_verification_token_to_email
 from backpack.utils.jwt import generate_jwt, JWT_EXPIRATION_IN_HOURS
 from config import JWT_SECRET
+from backpack.utils import cookies
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+@bp.route("/login/", methods=["POST"])
+def login():
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+
+        if not password or not (username or email):
+            return jsonify({"error": "Missing fields"}), 400
+        
+        user = User.find_one(username=username) if username else User.find_one(email=email)
+
+        if not user:
+            return jsonify({"error": "Incorrect credentials"}), 401
+        
+        is_password_correct = hashing.check(password, user.password)
+
+        if not is_password_correct:
+            return jsonify({"error": "Incorrect credentials"}), 401
+        
+        payload = {
+            "id": user.id,
+            "username": user.username
+        }
+        token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
+
+        response = make_response(jsonify({ "id": user.id }), 200)
+        response.headers["Authorization"] = f"Bearer {token}"
+        return response
+
 
 @bp.route("/register/", methods=["POST"])
 def register():
@@ -116,6 +151,7 @@ def resend_token():
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
+
 
 def is_verification_token_expired(token_sent_at: datetime):
     expiration_time_in_seconds = 5 * 60

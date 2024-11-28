@@ -77,7 +77,7 @@ class Model(metaclass=ModelMeta):
     def create_table(self):
         fields = [f"{field.column} {field.sqlize()}" for _, field in self.__fields__.items()]
         query = f"CREATE TABLE IF NOT EXISTS {self.__tablename__} ({', '.join(fields)});"
-        print(query)
+
         with create_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query)
