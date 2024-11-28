@@ -29,3 +29,13 @@ class User(Model):
         self.token_sent_at = DateTime.now()
 
         return self.verification_token
+    
+    def to_dict(self):
+        return {
+            "userId": self.id,
+            "username": self.username,
+            "email": self.email,
+            "birthDate": self.birth_date,
+            "verified": self.verified,
+            "createdAt": self.created_at
+        }

@@ -1,11 +1,12 @@
 from flask import Flask, Blueprint
-from backpack.routes import auth
+from backpack.routes import auth, users
 
 app = Flask(__name__)
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
 api.register_blueprint(auth.bp)
+api.register_blueprint(users.bp)
 
 @api.route("/")
 def index():
