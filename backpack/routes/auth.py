@@ -8,6 +8,15 @@ from config import JWT_SECRET
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+@bp.route("/logout", methods=["POST"])
+def logout():
+
+    if request.method == "POST":
+        response = make_response(jsonify({ "message": "Logged out successfully" }), 200)
+        response.headers["Authorization"] = ""
+        return response
+
+
 @bp.route("/login/", methods=["POST"])
 def login():
 
@@ -135,7 +144,7 @@ def resend_token():
     if request.method == "POST":
         id = request.get_json().get("id")
 
-        if not all(id):
+        if not id:
             return jsonify({"error": "Missing fields"}), 400
 
         try:
