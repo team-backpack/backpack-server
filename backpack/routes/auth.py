@@ -5,7 +5,6 @@ from backpack.utils import hashing
 from backpack.utils.emailing import send_verification_token_to_email
 from backpack.utils.jwt import generate_jwt, JWT_EXPIRATION_IN_HOURS
 from config import JWT_SECRET
-from backpack.utils import cookies
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -93,8 +92,11 @@ def register():
                 "username": new_user.username
             }
             token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
-            
-            return jsonify({ "id": new_user.id, "token": token }), 201
+
+            response = make_response(jsonify({ "id": new_user.id }), 201)
+            response.headers["Authorization"] = f"Bearer {token}"
+            return response
+        
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
