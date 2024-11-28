@@ -40,6 +40,9 @@ def login():
         if not is_password_correct:
             return jsonify({"error": "Incorrect credentials"}), 401
         
+        if not user.verified:
+            return jsonify({"error": "User is not verified"}), 403
+        
         payload = {
             "id": user.id,
             "username": user.username
@@ -122,7 +125,10 @@ def verify():
             return jsonify({"error": "Missing fields"}), 400
 
         try:
-            user: User = User.select().where(id=id).one()
+            user: User = User.find_one(id=id)
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
             if user.verification_token != verification_token:
                 return jsonify({ "error": "Invalid token" }), 400
             
@@ -132,7 +138,7 @@ def verify():
             user.verified = True
             user.update()
             
-            return jsonify({}), 200
+            return jsonify({ "message": "User is now verified" }), 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
@@ -158,7 +164,7 @@ def resend_token():
 
             send_verification_token_to_email(user.email, verification_token)
             
-            return 200
+            return jsonify({"message": "Token resent successfully"}), 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500

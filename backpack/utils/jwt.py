@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta
 from functools import wraps
 from config import JWT_SECRET
+from backpack.models.user import User
 
 JWT_EXPIRATION_IN_HOURS = 2
 
@@ -29,7 +30,13 @@ def jwt_required(f):
         token = auth_header.split(" ")[1]
         try:
             decoded_token = decode_jwt(token, JWT_SECRET)
-            request.user = decoded_token
+            if not decoded_token:
+                return jsonify({"error": "Invalid token"}), 401
+            
+            user = User.find_one(id=decoded_token.get("id"))
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
         except ValueError as e:
             return jsonify({"error": str(e)}), 401
 
