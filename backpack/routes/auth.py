@@ -12,7 +12,7 @@ def logout():
 
     if request.method == "POST":
         response = make_response(jsonify({ "message": "Logged out successfully" }), 200)
-        response.headers["Authorization"] = ""
+        response.set_cookie("jwt", "")
         return response
 
 
@@ -83,7 +83,7 @@ def register():
             if (date.today() - birth_date).days < permited_age_in_days:
                 return jsonify({ "error": "User too young" }), 400
             
-            password = hash(password)
+            password = hashing.hash(password)
             
             new_user = User(username=username, email=email, password=password, birth_date=birth_date)
             verification_token = new_user.generate_verification_token()
@@ -120,7 +120,7 @@ def verify():
                 return jsonify({ "error": "Invalid token" }), 400
             
             if is_verification_token_expired(user.token_sent_at):
-                return jsonify({ "error": "Expired token" }), 400
+                return jsonify({ "error": "Token expired" }), 400
             
             user.verified = True
             user.update()
