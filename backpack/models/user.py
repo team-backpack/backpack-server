@@ -20,7 +20,7 @@ class User(Model):
         username: String = None,
         email: String = None,
         password: String = None,
-        birth_date: Date = None,
+        birth_date: Date = None
     ):
         super().__init__(username=username, email=email, password=password, birth_date=birth_date)
 
