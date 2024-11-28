@@ -22,7 +22,7 @@ def send_email(to: str = "", subject: str = "", body: str = ""):
         server.sendmail(from_email, to, message.as_string())
 
 
-def send_verification_token_to_email(email: str, token: str = ""):
+def send_verification_token(email: str, token: str = ""):
     with open("backpack/templates/token.html", mode="r", encoding="UTF-8") as file:
         body = file.read()
         body = body.format(token)

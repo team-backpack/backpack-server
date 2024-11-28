@@ -2,9 +2,8 @@ from flask import Blueprint, request, jsonify, make_response
 from datetime import date, datetime
 from backpack.models.user import User
 from backpack.utils import hashing
-from backpack.utils.emailing import send_verification_token_to_email
-from backpack.utils.jwt import generate_jwt, JWT_EXPIRATION_IN_HOURS
-from config import JWT_SECRET
+from backpack.utils import emailing
+from backpack.utils import jwt
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -42,15 +41,9 @@ def login():
         
         if not user.verified:
             return jsonify({"error": "User is not verified"}), 403
-        
-        payload = {
-            "id": user.id,
-            "username": user.username
-        }
-        token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
 
         response = make_response(jsonify({ "id": user.id }), 200)
-        response.headers["Authorization"] = f"Bearer {token}"
+        response = jwt.set_jwt_cookie(response, user.id, user.username)
         return response
 
 
@@ -97,16 +90,10 @@ def register():
 
             new_user.insert()
 
-            send_verification_token_to_email(new_user.email, verification_token)
+            emailing.send_verification_token(new_user.email, verification_token)
                 
-            payload = {
-                "id": new_user.id,
-                "username": new_user.username
-            }
-            token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
-
             response = make_response(jsonify({ "id": new_user.id }), 201)
-            response.headers["Authorization"] = f"Bearer {token}"
+            response = jwt.set_jwt_cookie(response, new_user.id, new_user.id)
             return response
         
         except Exception as e:
@@ -162,7 +149,7 @@ def resend_token():
             verification_token = user.generate_verification_token()
             user.update()
 
-            send_verification_token_to_email(user.email, verification_token)
+            emailing.send_verification_token(user.email, verification_token)
             
             return jsonify({"message": "Token resent successfully"}), 200
         except Exception as e:

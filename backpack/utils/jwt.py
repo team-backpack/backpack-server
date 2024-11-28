@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request, jsonify, Response
 import jwt
 from datetime import datetime, timedelta
 from functools import wraps
@@ -12,13 +12,23 @@ def generate_jwt(payload: dict, secret: str, expirates_in_hours: int):
     payload.update({ "exp": expiration })
     return jwt.encode(payload, secret, algorithm="HS256")
 
-def decode_jwt(token, secret):
+def decode_jwt(token: str, secret: str):
     try:
         return jwt.decode(token, secret, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise ValueError("Token expired")
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token")
+    
+def set_jwt_cookie(response: Response, user_id: str, username: str):
+    payload = {
+        "id": user_id,
+        "username": username
+    }
+    token = generate_jwt(payload, JWT_SECRET, JWT_EXPIRATION_IN_HOURS)
+
+    response.headers["Authorization"] = f"Bearer {token}"
+    return response
 
 def jwt_required(f):
     @wraps(f)
