@@ -7,7 +7,7 @@ from backpack.utils import jwt
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-@bp.route("/logout", methods=["POST"])
+@bp.route("/logout/", methods=["POST"])
 def logout():
 
     if request.method == "POST":

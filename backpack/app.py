@@ -1,7 +1,9 @@
 from flask import Flask, Blueprint
+from backpack.middleware.protect_routes import ProtectRoutes
 from backpack.routes import auth, users
 
 app = Flask(__name__)
+app.wsgi_app = ProtectRoutes(app.wsgi_app)
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
