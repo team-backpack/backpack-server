@@ -4,6 +4,7 @@ from backpack.routes import auth, users
 
 app = Flask(__name__)
 app.wsgi_app = ProtectRoutes(app.wsgi_app)
+app.config.from_pyfile("config.py")
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
