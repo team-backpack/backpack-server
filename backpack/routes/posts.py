@@ -6,7 +6,7 @@ from backpack.utils import jwt
 bp = Blueprint("posts", __name__, url_prefix="/posts")
 
 @bp.route("/", methods=["GET", "POST"])
-def users():
+def posts():
 
     if request.method == "GET":
         posts = [post.to_dict() for post in Post.find_all()]
@@ -25,3 +25,10 @@ def users():
         new_post.insert()
 
         return jsonify(new_post.to_dict()), 201
+
+
+@bp.route("/<string:post_id>", methods=["GET", "PUT", "DELETE"])
+def post(post_id: str):
+
+    if request.method == "GET":
+        return jsonify(Post.find_one(id=post_id).to_dict()), 200

@@ -5,7 +5,7 @@ from backpack.models.user import User
 @table("Post")
 class Post(Model):
 
-    id = Field(String, column="postId", primary_key=True, generator=GenerationStrategy.UUID)
+    id = Field(String, column="postId", primary_key=True, generator=GenerationStrategy.NANOID)
     user = Field(User, column="userId", required=True, foreign_key=ForeignKey("userId", String))
     text = Field(String)
     content_url = Field(String, column="contentURL")
