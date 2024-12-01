@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 from backpack.models.post import Post
 from backpack.models.user import User
 from backpack.utils import jwt
@@ -32,3 +33,18 @@ def post(post_id: str):
 
     if request.method == "GET":
         return jsonify(Post.find_one(id=post_id).to_dict()), 200
+    
+    if request.method == "PUT":
+        data = request.get_json()
+
+        text = data.get("text")
+
+        post = Post.find_one(id=post_id)
+        if not post:
+            return jsonify({"error": "Post not found"}), 404
+        
+        post.text = text
+        post.was_edited_at = datetime.now()
+        post.update()
+
+        return jsonify(post.to_dict()), 200
