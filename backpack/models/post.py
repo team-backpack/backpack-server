@@ -34,7 +34,7 @@ class Post(Model):
             "likes": self.likes,
             "shares": self.shares,
             "comments": self.comments,
-            "wasEdited": self.was_edited,
+            "wasEditedAt": self.was_edited_at,
             "isSharedPost": self.is_shared_post,
             "createdAt": self.created_at,
             "updatedAt": self.updated_at

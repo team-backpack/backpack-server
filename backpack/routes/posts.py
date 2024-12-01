@@ -9,17 +9,8 @@ bp = Blueprint("posts", __name__, url_prefix="/posts")
 def users():
 
     if request.method == "GET":
-        posts = Post.find_all()
-
-        all_posts = []
-
-        for post in posts:
-            json = post.to_dict()
-            json["user"] = post.user.to_dict()
-
-            all_posts.append(json)
-        
-        return jsonify(all_posts), 200
+        posts = [post.to_dict() for post in Post.find_all()]
+        return jsonify(posts), 200
     
     if request.method == "POST":
         data = request.get_json()

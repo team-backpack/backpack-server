@@ -28,9 +28,10 @@ class ModelMeta(type):
 
 class Model(metaclass=ModelMeta):
 
-    TABLES_CREATED = False
+    _tables_created = False
 
     def __init__(self, **args):
+
         for field_name, field in self.__fields__.items():
             
             if field.generator == GenerationStrategy.UUID or field.generator == GenerationStrategy.NANOID:
@@ -78,7 +79,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def create_table(self):
-        if self.TABLES_CREATED:
+        if self._tables_created:
             return
 
         fields = [f"{field.column} {field.sqlize()}" for _, field in self.__fields__.items()]
@@ -89,7 +90,7 @@ class Model(metaclass=ModelMeta):
                 cursor.execute(query)
                 conn.commit()
 
-        self.TABLES_CREATED = True
+        self._tables_created = True
 
     def insert(self):
         self.create_table()
