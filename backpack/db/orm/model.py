@@ -2,6 +2,7 @@ from backpack.db.orm.types import MappedType
 from backpack.db.connection import create_connection
 from enum import Enum
 from uuid import uuid4
+import nanoid
 from datetime import date, datetime
 
 class ModelMeta(type):
@@ -27,10 +28,12 @@ class ModelMeta(type):
 
 class Model(metaclass=ModelMeta):
 
+    TABLES_CREATED = False
+
     def __init__(self, **args):
         for field_name, field in self.__fields__.items():
             
-            if field.generator == GenerationStrategy.UUID:
+            if field.generator == GenerationStrategy.UUID or field.generator == GenerationStrategy.NANOID:
                 setattr(self, field_name, args.get(field_name, str(field.generator())))
             else:
                 setattr(self, field_name, args.get(field_name, field.default))
@@ -75,6 +78,9 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def create_table(self):
+        if self.TABLES_CREATED:
+            return
+
         fields = [f"{field.column} {field.sqlize()}" for _, field in self.__fields__.items()]
         query = f"CREATE TABLE IF NOT EXISTS {self.__tablename__} ({', '.join(fields)});"
 
@@ -82,6 +88,8 @@ class Model(metaclass=ModelMeta):
             with conn.cursor() as cursor:
                 cursor.execute(query)
                 conn.commit()
+
+        self.TABLES_CREATED = True
 
     def insert(self):
         self.create_table()
@@ -261,6 +269,7 @@ def table(name: str):
 
 class GenerationStrategy(Enum):
     UUID = uuid4
+    NANOID = nanoid.generate
     INCREMENT = None
 
 
@@ -273,7 +282,7 @@ class ForeignKey:
 
 class Field:
     
-    def __init__(self, mapped: MappedType | Model, column: str = "", required: bool = False, unique: bool = False, primary_key: bool = False, foreign_key: ForeignKey = None, default: MappedType = None, generator: GenerationStrategy = None):
+    def __init__(self, mapped: MappedType | Model, column: str = "", required: bool = False, unique: bool = False, primary_key: bool = False, foreign_key: ForeignKey = None, default: MappedType | type = None, generator: GenerationStrategy = None):
         self.column = column
         self.required = required
         self.unique = unique
@@ -286,14 +295,16 @@ class Field:
     def sqlize(self):
         not_null = "NOT NULL" if self.required else ""
         unique = "UNIQUE" if self.unique else ""
-
+        
         default = ""
-        if self.default and not isinstance(self.default, (date, datetime)):
+        if self.default and not isinstance(self.default, (date, datetime, bool)):
             default = f"DEFAULT {self.default}"
         elif isinstance(self.default, datetime):
             default = "DEFAULT CURRENT_TIMESTAMP"
         elif isinstance(self.default, date):
             default = "DEFAULT CURRENT_DATE"
+        elif isinstance(self.default, bool):
+            default = "DEFAULT TRUE" if self.default else "DEFAULT FALSE"
 
         auto_increment = "AUTO_INCREMENT" if self.generator == GenerationStrategy.INCREMENT else ""
         primary_key = "PRIMARY KEY" if self.primary_key else ""
