@@ -28,13 +28,17 @@ def posts():
         return jsonify(new_post.to_dict()), 201
 
 
-@bp.route("/<string:post_id>", methods=["GET", "PUT", "DELETE"])
+@bp.route("/<string:post_id>", methods=["GET", "PATCH", "DELETE"])
 def post(post_id: str):
 
     if request.method == "GET":
-        return jsonify(Post.find_one(id=post_id).to_dict()), 200
+        post = Post.find_one(id=post_id)
+        if not post:
+            return jsonify({"error": "Post not found"}), 404
+        
+        return jsonify(post.to_dict()), 200
     
-    if request.method == "PUT":
+    if request.method == "PATCH":
         data = request.get_json()
 
         text = data.get("text")
@@ -48,3 +52,12 @@ def post(post_id: str):
         post.update()
 
         return jsonify(post.to_dict()), 200
+    
+    if request.method == "DELETE":
+        post = Post.find_one(id=post_id)
+        if not post:
+            return jsonify({"error": "Post not found"}), 404
+        
+        Post.delete(id=post_id)
+
+        return jsonify({ "message": "Post deleted successfully" }), 200
