@@ -31,6 +31,10 @@ def set_jwt_cookie(response: Response, user_id: str, username: str):
     response.set_cookie("jwt", token, max_age=JWT_EXPIRATION_IN_SECONDS, httponly=True, secure=True)
     return response
 
+def get_current_user_id(token: str):
+    decoded_token = decode_jwt(token, JWT_SECRET)
+    return decoded_token.get("id")
+
 def jwt_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):

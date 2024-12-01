@@ -13,12 +13,12 @@ class Post(Model):
     shares = Field(Integer, required=True, default=0)
     comments = Field(Integer, required=True, default=0)
     is_shared_post = Field(Boolean, column="isSharedPost", required=True, default=False)
-    was_edited = Field(Boolean, column="wasEdited",  required=True, default=False)
+    was_edited_at = Field(DateTime, column="wasEditedAt")
     created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
     updated_at = Field(DateTime, column="updatedAt", required=True, default=DateTime.now())
 
     def __init__(self,
-        user: String = None,
+        user: User = None,
         text: String = None,
         content_url: String = None,
         is_shared_post: Boolean = False
@@ -28,6 +28,7 @@ class Post(Model):
     def to_dict(self):
         return {
             "postId": self.id,
+            "user": self.user.to_dict(),
             "text": self.text,
             "contentURL": self.content_url,
             "likes": self.likes,
