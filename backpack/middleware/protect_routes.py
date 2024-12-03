@@ -15,10 +15,10 @@ class ProtectRoutes():
         if path in self.excluded_routes:
             return self.app(environ, start_response)
 
-        token = environ.get("HTTP_COOKIE")
-        token = token.split("=")[1]
-
-        if not token:
+        try:
+            token = environ.get("HTTP_COOKIE")
+            token = token.split("=")[1]
+        except Exception as e:
             return self._respond(start_response, "Token is missing")
         
         try:
