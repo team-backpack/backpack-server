@@ -88,3 +88,29 @@ def like(post_id: str):
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
+
+ 
+@bp.route("/<string:post_id>/dislike/", methods=["POST"])
+def dislike(post_id: str):
+        
+    if request.method == "POST":
+
+        try:
+            post = Post.find_one(id=post_id)
+
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            user = User.find_one(id=user_id)
+
+            like = Like.find_one(user=user, post=post)
+            if not like:
+                return jsonify({ "message": "Post is not liked" }), 400
+
+            Like.delete(user=user, post=post)
+
+            post.likes -= 1
+            post.update()
+
+            return jsonify({ "message": "Post disliked successfully" }), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
