@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from backpack.models.post import Post
 from backpack.models.user import User
+from backpack.models.like import Like
 from backpack.utils import jwt
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
@@ -61,3 +62,29 @@ def post(post_id: str):
         Post.delete(id=post_id)
 
         return jsonify({ "message": "Post deleted successfully" }), 200
+    
+
+@bp.route("/<string:post_id>/like/", methods=["POST"])
+def like(post_id: str):
+        
+    if request.method == "POST":
+
+        try:
+            post = Post.find_one(id=post_id)
+
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            user = User.find_one(id=user_id)
+
+            like = Like.find_one(user=user, post=post)
+            if like:
+                return jsonify({ "message": "Post already liked" }), 400
+
+            Like(user=user, post=post).insert()
+
+            post.likes += 1
+            post.update()
+
+            return jsonify({ "message": "Post liked successfully" }), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
