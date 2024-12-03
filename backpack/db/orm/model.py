@@ -39,8 +39,6 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, field_name, args.get(field_name, field.default))
 
-        self.create_table()
-
     def __setattr__(self, name, value):
         if name in self.__fields__:
             field = self.__fields__[name]
