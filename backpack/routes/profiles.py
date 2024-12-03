@@ -5,6 +5,7 @@ from backpack.models.profile.cultural_interest import CulturalInterest, ProfileC
 from backpack.models.profile.general_interest import GeneralInterest, ProfileGeneralInterest
 from backpack.models.profile.language import Language
 from backpack.models.user import User
+from backpack.models.post import Post
 from backpack.utils import jwt
 
 bp = Blueprint("profiles", __name__, url_prefix="/profiles")
@@ -57,7 +58,7 @@ def profiles():
 
                 if cultural_interest:
                     ProfileCulturalInterest(profile=profile, cultural_interest=cultural_interest).insert()
-                    
+
                     result["culturalInterests"].append(cultural_interest)
                 
             result["generalInterests"] = []
@@ -76,3 +77,27 @@ def profiles():
             return jsonify({ "error": "Internal Server Error" }), 500
 
 
+@bp.route("/<string:username>", methods=["GET"])
+def profile(username: str):
+
+    if request.method == "GET":
+
+        try:
+            user = User.find_one(username=username)
+
+            profile = Profile.find_one(user=user)
+            posts = Post.find_all(user=user)
+
+            result = profile.to_dict()
+
+            result["culturalInterests"] = [
+                profile_cultural_interest.cultural_interest for profile_cultural_interest in ProfileCulturalInterest.find_all(profile=profile)
+            ]
+
+            result["posts"] = [post.to_dict(show_user=False) for post in posts]
+
+            return jsonify(result), 200
+
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500

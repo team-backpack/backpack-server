@@ -27,14 +27,18 @@ class Profile(Model):
     ):
         super().__init__(user=user, display_name=display_name, description=description, picture_url=picture_url, banner_url=banner_url, location=location, language=language)
 
-    def to_dict(self):
-        return {
+    def to_dict(self, show_user: bool = True):
+        result = {
             "profileId": self.id,
             "displayName": self.display_name,
             "description": self.description,
             "pictureURL": self.picture_url,
             "bannerURL": self.banner_url,
-            "user": self.user.to_dict() if self.user else None,
             "location": self.location.to_dict() if self.location else None,
             "language": self.language.to_dict() if self.language else None
         }
+
+        if show_user:
+            result["user"] = self.user.to_dict()
+
+        return result

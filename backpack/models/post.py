@@ -25,10 +25,9 @@ class Post(Model):
     ):
         super().__init__(user=user, text=text, content_url=content_url, is_shared_post=is_shared_post)
 
-    def to_dict(self):
-        return {
+    def to_dict(self, show_user: bool = True):
+        result = {
             "postId": self.id,
-            "user": self.user.to_dict(),
             "text": self.text,
             "contentURL": self.content_url,
             "likes": self.likes,
@@ -39,3 +38,8 @@ class Post(Model):
             "createdAt": self.created_at,
             "updatedAt": self.updated_at
         }
+
+        if show_user:
+            result["user"] = self.user.to_dict()
+
+        return result
