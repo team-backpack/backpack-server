@@ -8,7 +8,7 @@ class Post(Model):
     id = Field(String, column="postId", primary_key=True, generator=GenerationStrategy.NANOID)
     user = Field(User, column="userId", required=True, foreign_key=ForeignKey("userId", String))
     text = Field(String)
-    content_url = Field(String, column="contentURL")
+    content_url = Field(String, column="contentUrl")
     likes = Field(Integer, required=True, default=0)
     shares = Field(Integer, required=True, default=0)
     comments = Field(Integer, required=True, default=0)
