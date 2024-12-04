@@ -3,7 +3,8 @@ from datetime import datetime
 from backpack.models.post import Post
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
-from backpack.models.like import Like
+from backpack.models.interaction.like import Like
+from backpack.models.interaction.repost import Repost
 from backpack.utils import jwt
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
@@ -135,6 +136,43 @@ def like(post_id: str):
             post.update()
 
             return jsonify({ "message": "Post disliked successfully" }), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
+        
+
+@bp.route("/<string:post_id>/reposts/", methods=["GET", "POST", "DELETE"])
+def reposts(post_id: str):
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        text = data.get("text")
+        media_url = data.get("mediaURL")
+        is_shared_post = data.get("isSharedPost")
+
+        try:
+            reposted = Post.find_one(id=post_id)
+            if not reposted:
+                return jsonify({"error": "Reposted not found"}), 404
+
+            repost = None
+
+            if not text and not media_url:
+                repost = Repost(reposted=reposted)
+            else:
+                user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+
+                post = Post(user=User.find_one(id=user_id), text=text, media_url=media_url, is_shared_post=is_shared_post)
+
+                repost = Repost(post=post, reposted=reposted)
+                
+            repost.insert()
+
+            reposted.reposts += 1
+            reposted.update()
+
+            return jsonify(repost.to_dict()), 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500

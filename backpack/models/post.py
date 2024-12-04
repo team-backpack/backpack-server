@@ -10,7 +10,7 @@ class Post(Model):
     text = Field(String)
     media_url = Field(String, column="contentUrl")
     likes = Field(Integer, required=True, default=0)
-    shares = Field(Integer, required=True, default=0)
+    reposts = Field(Integer, required=True, default=0)
     comments = Field(Integer, required=True, default=0)
     is_shared_post = Field(Boolean, column="isSharedPost", required=True, default=False)
     was_edited_at = Field(DateTime, column="wasEditedAt")
@@ -31,7 +31,7 @@ class Post(Model):
             "text": self.text,
             "mediaURL": self.media_url,
             "likes": self.likes,
-            "shares": self.shares,
+            "reposts": self.reposts,
             "comments": self.comments,
             "wasEditedAt": self.was_edited_at,
             "isSharedPost": self.is_shared_post,
