@@ -144,6 +144,27 @@ def like(post_id: str):
 @bp.route("/<string:post_id>/reposts/", methods=["GET", "POST", "DELETE"])
 def reposts(post_id: str):
 
+    if request.method == "GET":
+        try:
+            reposts: list[Repost] = Repost.find_all(reposted=Post.find_one(id=post_id))
+
+            response = []
+
+            for repost in reposts:
+                result = {}
+                result["post"] = repost.post.to_dict(show_user=False) if repost.post else None
+
+                profile = Profile.find_one(user=repost.post.user)
+                if profile:
+                    result["profile"] = profile.to_dict()
+
+                response.append(result)
+
+            return jsonify(response), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
+
     if request.method == "POST":
         data = request.get_json()
 
@@ -172,7 +193,7 @@ def reposts(post_id: str):
             reposted.reposts += 1
             reposted.update()
 
-            return jsonify(repost.to_dict()), 200
+            return jsonify(repost.to_dict()), 201
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
