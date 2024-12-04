@@ -218,7 +218,8 @@ def reposts(post_id: str):
                 jsonify({ "error": "Repost not found" }), 404
 
             Repost.delete(id=repost.id)
-            Post.delete(id=repost.post.id)
+            if repost.post:
+                Post.delete(id=repost.post.id)
 
             reposted.reposts -= 1
             reposted.update()
