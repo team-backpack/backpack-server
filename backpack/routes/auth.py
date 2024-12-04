@@ -145,17 +145,13 @@ def verify(user_id: str):
             return jsonify({ "error": "Internal Server Error" }), 500
         
 
-@bp.route("/resend-token/", methods=["POST"])
-def resend_token():
+@bp.route("/resend-token/<string:user_id>/", methods=["POST"])
+def resend_token(user_id: str):
 
     if request.method == "POST":
-        id = request.get_json().get("id")
-
-        if not id:
-            return jsonify({"error": "Missing fields"}), 400
 
         try:
-            user: User = User.select().where(id=id).one()
+            user: User = User.select().where(id=user_id).one()
 
             if user.verified:
                 return jsonify({ "error": "User is already verified" }), 400
