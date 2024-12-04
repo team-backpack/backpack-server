@@ -34,11 +34,11 @@ def login():
         user = User.find_one(username=username) if username else User.find_one(email=email)
 
         if not user:
-            return jsonify({"error": "Incorrect credentials"}), 401
+            return jsonify({"error": "User not found"}), 404
         
         is_password_correct = hashing.check(password, user.password)
 
-        if not is_password_correct:
+        if not is_password_correct or not (user.username == username or user.email == email):
             return jsonify({"error": "Incorrect credentials"}), 401
         
         if not user.verified:

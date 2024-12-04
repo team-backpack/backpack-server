@@ -5,7 +5,6 @@ from backpack.models.user import User
 from backpack.models.profile.profile import Profile
 from backpack.models.like import Like
 from backpack.utils import jwt
-from backpack.utils import recommendation
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
 
@@ -77,8 +76,24 @@ def post(post_id: str):
         return jsonify({ "message": "Post deleted successfully" }), 200
     
 
-@bp.route("/<string:post_id>/like/", methods=["POST", "DELETE"])
+@bp.route("/<string:post_id>/likes/", methods=["GET", "POST", "DELETE"])
 def like(post_id: str):
+
+    if request.method == "GET":
+        try:
+            likes: list[Like] = Like.find_all(post=Post.find_one(id=post_id))
+
+            response = []
+
+            for like in likes:
+                profile = Profile.find_one(user=like.user)
+                if profile:
+                    response.append(profile.to_dict())
+
+            return jsonify(response), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
         
     if request.method == "POST":
 
