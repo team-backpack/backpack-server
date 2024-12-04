@@ -50,27 +50,27 @@ def profiles():
 
             profile.insert()
 
-            result = profile.to_dict()
+            response = profile.to_dict()
 
-            result["culturalInterests"] = []
+            response["culturalInterests"] = []
             for name in cultural_interests:
                 cultural_interest = CulturalInterest.find_one(name=name)
 
                 if cultural_interest:
                     ProfileCulturalInterest(profile=profile, cultural_interest=cultural_interest).insert()
 
-                    result["culturalInterests"].append(cultural_interest)
+                    response["culturalInterests"].append(cultural_interest)
                 
-            result["generalInterests"] = []
+            response["generalInterests"] = []
             for name in general_interests:
                 general_interest = GeneralInterest.find_one(name=name)
 
                 if general_interest:
                     ProfileGeneralInterest(profile=profile, general_interest=general_interest).insert()
 
-                    result["generalInterests"].append(general_interest)
+                    response["generalInterests"].append(general_interest)
 
-            return jsonify(result), 201
+            return jsonify(response), 201
 
         except Exception as e:
             print(e)
@@ -88,15 +88,15 @@ def profile(username: str):
             profile = Profile.find_one(user=user)
             posts = Post.find_all(user=user)
 
-            result = profile.to_dict()
+            response = profile.to_dict()
 
-            result["culturalInterests"] = [
+            response["culturalInterests"] = [
                 profile_cultural_interest.cultural_interest for profile_cultural_interest in ProfileCulturalInterest.find_all(profile=profile)
             ]
 
-            result["posts"] = [post.to_dict(show_user=False) for post in posts]
+            response["posts"] = [post.to_dict(show_user=False) for post in posts]
 
-            return jsonify(result), 200
+            return jsonify(response), 200
 
         except Exception as e:
             print(e)

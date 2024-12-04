@@ -14,14 +14,14 @@ def posts():
     if request.method == "GET":
         posts = [post for post in Post.find_all()]
 
-        results = []
+        response = []
 
         for post in posts:
             result = post.to_dict()
             result["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
-            results.append(result)
+            response.append(result)
 
-        return jsonify(results), 200
+        return jsonify(response), 200
     
     if request.method == "POST":
         data = request.get_json()
@@ -46,10 +46,10 @@ def post(post_id: str):
         if not post:
             return jsonify({"error": "Post not found"}), 404
         
-        result = post.to_dict()
-        result["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
+        response = post.to_dict()
+        response["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
 
-        return jsonify(result), 200
+        return jsonify(response), 200
     
     if request.method == "PATCH":
         data = request.get_json()
