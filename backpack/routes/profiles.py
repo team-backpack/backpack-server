@@ -84,8 +84,13 @@ def profile(username: str):
 
         try:
             user = User.find_one(username=username)
+            if not user:
+                return jsonify({"error": "User not found"}), 404
 
             profile = Profile.find_one(user=user)
+            if not profile:
+                return jsonify({"error": "Profile not found"}), 404
+            
             posts = Post.find_all(user=user)
 
             response = profile.to_dict()

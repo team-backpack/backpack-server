@@ -1,6 +1,6 @@
 from backpack.db.orm.model import table, Model, Field, GenerationStrategy, ForeignKey
 from backpack.db.orm.types import String, Boolean, DateTime
-from backpack.utils.token import token
+from backpack.utils.token_generator import token
 
 @table("ChangePasswordRequest")
 class ChangePasswordRequest(Model):

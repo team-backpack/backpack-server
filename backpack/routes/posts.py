@@ -5,6 +5,7 @@ from backpack.models.user import User
 from backpack.models.profile.profile import Profile
 from backpack.models.like import Like
 from backpack.utils import jwt
+from backpack.utils import recommendation
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
 
@@ -27,12 +28,12 @@ def posts():
         data = request.get_json()
 
         text = data.get("text")
-        content_url = data.get("contentURL")
+        media_url = data.get("mediaURL")
         is_shared_post = data.get("isSharedPost")
 
         user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
-        new_post = Post(user=User.find_one(id=user_id), text=text, content_url=content_url, is_shared_post=is_shared_post)
+        new_post = Post(user=User.find_one(id=user_id), text=text, media_url=media_url, is_shared_post=is_shared_post)
         new_post.insert()
 
         return jsonify(new_post.to_dict()), 201

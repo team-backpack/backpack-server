@@ -8,7 +8,7 @@ class Post(Model):
     id = Field(String, column="postId", primary_key=True, generator=GenerationStrategy.NANOID)
     user = Field(User, column="userId", required=True, foreign_key=ForeignKey("userId", String))
     text = Field(String)
-    content_url = Field(String, column="contentUrl")
+    media_url = Field(String, column="contentUrl")
     likes = Field(Integer, required=True, default=0)
     shares = Field(Integer, required=True, default=0)
     comments = Field(Integer, required=True, default=0)
@@ -20,16 +20,16 @@ class Post(Model):
     def __init__(self,
         user: User = None,
         text: String = None,
-        content_url: String = None,
+        media_url: String = None,
         is_shared_post: Boolean = False
     ):
-        super().__init__(user=user, text=text, content_url=content_url, is_shared_post=is_shared_post)
+        super().__init__(user=user, text=text, media_url=media_url, is_shared_post=is_shared_post)
 
     def to_dict(self, show_user: bool = True):
         result = {
             "postId": self.id,
             "text": self.text,
-            "contentURL": self.content_url,
+            "mediaURL": self.media_url,
             "likes": self.likes,
             "shares": self.shares,
             "comments": self.comments,

@@ -1,6 +1,6 @@
 from backpack.db.orm.model import table, Model, Field, GenerationStrategy
 from backpack.db.orm.types import String, Date, DateTime, Boolean
-from backpack.utils.token import token
+from backpack.utils.token_generator import token
 
 @table("User")
 class User(Model):
