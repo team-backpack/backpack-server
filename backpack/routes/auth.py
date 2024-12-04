@@ -113,26 +113,28 @@ def register():
             return jsonify({ "error": "Internal Server Error" }), 500
 
 
-@bp.route("/verify/", methods=["POST"])
-def verify():
+@bp.route("/verify/<string:user_id>/", methods=["POST"])
+def verify(user_id: str):
 
     if request.method == "POST":
-        id = request.get_json().get("id")
         verification_token = request.get_json().get("verificationToken")
 
-        if not all((id, verification_token)):
+        if not verification_token:
             return jsonify({"error": "Missing fields"}), 400
 
         try:
-            user: User = User.find_one(id=id)
+            user: User = User.find_one(id=user_id)
             if not user:
                 return jsonify({"error": "User not found"}), 404
 
+            if user.verified:
+                return jsonify({"error": "User is already verified"}), 400
+
             if user.verification_token != verification_token:
-                return jsonify({ "error": "Invalid token" }), 400
+                return jsonify({ "error": "Invalid verification token" }), 400
             
             if is_verification_token_expired(user.token_sent_at):
-                return jsonify({ "error": "Token expired" }), 400
+                return jsonify({ "error": "Verification token expired" }), 400
             
             user.verified = True
             user.update()
