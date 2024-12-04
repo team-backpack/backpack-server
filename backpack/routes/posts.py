@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from backpack.models.post import Post
 from backpack.models.user import User
+from backpack.models.profile.profile import Profile
 from backpack.models.like import Like
 from backpack.utils import jwt
 
@@ -11,8 +12,16 @@ bp = Blueprint("posts", __name__, url_prefix="/posts")
 def posts():
 
     if request.method == "GET":
-        posts = [post.to_dict() for post in Post.find_all()]
-        return jsonify(posts), 200
+        posts = [post for post in Post.find_all()]
+
+        results = []
+
+        for post in posts:
+            result = post.to_dict()
+            result["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
+            results.append(result)
+
+        return jsonify(results), 200
     
     if request.method == "POST":
         data = request.get_json()
@@ -37,7 +46,10 @@ def post(post_id: str):
         if not post:
             return jsonify({"error": "Post not found"}), 404
         
-        return jsonify(post.to_dict()), 200
+        result = post.to_dict()
+        result["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
+
+        return jsonify(result), 200
     
     if request.method == "PATCH":
         data = request.get_json()
