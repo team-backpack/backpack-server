@@ -152,9 +152,10 @@ def reposts(post_id: str):
 
             for repost in reposts:
                 result = {}
-                result["post"] = repost.post.to_dict(show_user=False) if repost.post else None
 
-                profile = Profile.find_one(user=repost.post.user)
+                result["post"] = None if not repost.post else repost.post.to_dict()
+
+                profile = Profile.find_one(user=repost.user)
                 if profile:
                     result["profile"] = profile.to_dict()
 
@@ -169,31 +170,60 @@ def reposts(post_id: str):
         data = request.get_json()
 
         text = data.get("text")
-        media_url = data.get("mediaURL")
-        is_shared_post = data.get("isSharedPost")
+        media_url = data.get("mediaURL", "")
+        is_shared_post = data.get("isSharedPost", False)
 
         try:
             reposted = Post.find_one(id=post_id)
             if not reposted:
-                return jsonify({"error": "Reposted not found"}), 404
+                return jsonify({"error": "Reposted post not found"}), 404
+            
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            user = User.find_one(id=user_id)
 
-            repost = None
+            repost = Repost.find_one(user=user, reposted=reposted)
+            if repost:
+                return jsonify({"error": "Cannot repost the same post 2 or more times"}), 400
 
             if not text and not media_url:
-                repost = Repost(reposted=reposted)
+                repost = Repost(user=user,reposted=reposted)
             else:
                 user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
-                post = Post(user=User.find_one(id=user_id), text=text, media_url=media_url, is_shared_post=is_shared_post)
+                post = Post(user=user, text=text, media_url=media_url, is_shared_post=is_shared_post)
+                post.insert()
 
-                repost = Repost(post=post, reposted=reposted)
+                repost = Repost(user=user, post=post, reposted=reposted)
                 
             repost.insert()
 
             reposted.reposts += 1
             reposted.update()
 
-            return jsonify(repost.to_dict()), 201
+            return jsonify(repost.to_dict(show_user=False)), 201
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
+        
+    if request.method == "DELETE":
+        try:
+            reposted = Post.find_one(id=post_id)
+
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            user = User.find_one(id=user_id)
+
+            repost = Repost.find_one(user=user, reposted=reposted)
+
+            if not repost:
+                jsonify({ "error": "Repost not found" }), 404
+
+            Repost.delete(id=repost.id)
+            Post.delete(id=repost.post.id)
+
+            reposted.reposts -= 1
+            reposted.update()
+
+            return jsonify({ "message": "Repost deleted successfully" }), 200
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500

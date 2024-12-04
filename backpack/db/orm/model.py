@@ -62,8 +62,8 @@ class Model(metaclass=ModelMeta):
         raise AttributeError(f"{name} not found")
 
     @classmethod
-    def _build_where_clause(self, where: dict):
-        fields = {k: v.column for k, v in self.__fields__.items()} 
+    def _build_where_clause(self, **where):
+        fields = {k: v.column for k, v in self.__fields__.items()}
         valid_keys = [key for key in where.keys() if key in fields]
         valid_columns = [fields[key] for key in valid_keys]
         clause = " AND ".join([f"{key} = %s" for key in valid_columns])
@@ -120,7 +120,7 @@ class Model(metaclass=ModelMeta):
     def find_one(self, **where):
         self.create_table()
 
-        where_clause, params = self._build_where_clause(where)
+        where_clause, params = self._build_where_clause(**where)
 
         sql = f"""
             SELECT * FROM {self.__tablename__}
@@ -137,7 +137,7 @@ class Model(metaclass=ModelMeta):
     def find_all(self, **where):
         self.create_table()
 
-        where_clause, params = self._build_where_clause(where)
+        where_clause, params = self._build_where_clause(**where)
 
         sql = f"""
             SELECT * FROM {self.__tablename__}
@@ -169,7 +169,7 @@ class Model(metaclass=ModelMeta):
     def delete(self, **where):
         self.create_table()
         
-        where_clause, params = self._build_where_clause(where)
+        where_clause, params = self._build_where_clause(**where)
 
         sql = f"""
             DELETE FROM {self.__tablename__}
@@ -190,9 +190,9 @@ class Model(metaclass=ModelMeta):
             field_name = next((k for k, v in cls.__fields__.items() if v.column == column), None)
             if not field_name:
                 continue
-            if cls.__fields__.get(field_name).foreign_key:
-                primary_key_name = next(name for name, field in cls.__fields__[field_name].mapped.__fields__.items() if field.primary_key)
-                fk = cls.__fields__[field_name].mapped.find_one(where={ primary_key_name: value })
+            if cls.__fields__.get(field_name).foreign_key and value != None:
+                primary_key_name: str = [name for name, field in cls.__fields__[field_name].mapped.__fields__.items() if field.primary_key][0]
+                fk = cls.__fields__[field_name].mapped.find_one(**{primary_key_name: value})
                 setattr(instance, field_name, fk)
             else:
                 setattr(instance, field_name, value)
