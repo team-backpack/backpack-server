@@ -76,7 +76,7 @@ def post(post_id: str):
         return jsonify({ "message": "Post deleted successfully" }), 200
     
 
-@bp.route("/<string:post_id>/like/", methods=["POST"])
+@bp.route("/<string:post_id>/like/", methods=["POST", "DELETE"])
 def like(post_id: str):
         
     if request.method == "POST":
@@ -100,12 +100,8 @@ def like(post_id: str):
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
-
- 
-@bp.route("/<string:post_id>/dislike/", methods=["POST"])
-def dislike(post_id: str):
         
-    if request.method == "POST":
+    if request.method == "DELETE":
 
         try:
             post = Post.find_one(id=post_id)
