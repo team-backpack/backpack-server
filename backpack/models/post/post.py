@@ -15,6 +15,8 @@ class Post(Model):
     comments = Field(Integer, required=True, default=0)
     is_repost = Field(Boolean, column="isRepost", required=True, default=False)
     reposted_id = Field(String, column="repostedId", foreign_key=ForeignKey("postId", String, table_name="Post"))
+    repost_type = Field(String, column="repostType")
+    commented_id = Field(String, column="commentedId", foreign_key=ForeignKey("postId", String, table_name="Post"))
     was_edited_at = Field(DateTime, column="wasEditedAt")
     created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
     updated_at = Field(DateTime, column="updatedAt", required=True, default=DateTime.now())
@@ -24,15 +26,21 @@ class Post(Model):
         text: String = None,
         media_url: String = None,
         is_repost: Boolean = False,
-        reposted_id: String = None
+        reposted_id: String = None,
+        commented_id: String = None
     ):
-        super().__init__(user_id=user_id, text=text, media_url=media_url, is_repost=is_repost, reposted_id=reposted_id)
+        repost_type = None
+        if is_repost:
+            repost_type = "quote" if text or media_url else "simple"
+
+        super().__init__(user_id=user_id, text=text, media_url=media_url, is_repost=is_repost, reposted_id=reposted_id, commented_id=commented_id, repost_type=repost_type)
 
     def to_dict(self, show_profile: bool = True):
-        if self.is_repost and not (self.text or self.media_url):
+        if self.repost_type == "simple":
             result = {
                 "postId": self.id,
                 "isRepost": self.is_repost,
+                "repostType": self.repost_type,
                 "reposted": self.find_one(id=self.reposted_id).to_dict() if self.reposted_id else None,
                 "createdAt": self.created_at
             }
@@ -46,7 +54,9 @@ class Post(Model):
                 "comments": self.comments,
                 "wasEditedAt": self.was_edited_at,
                 "isRepost": self.is_repost,
+                "repostType": self.repost_type,
                 "reposted": self.find_one(id=self.reposted_id).to_dict() if self.reposted_id else None,
+                "commented": self.find_one(id=self.commented_id).to_dict() if self.commented_id else None,
                 "createdAt": self.created_at,
                 "updatedAt": self.updated_at
             }

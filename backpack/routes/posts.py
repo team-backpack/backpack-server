@@ -69,6 +69,16 @@ def post(post_id: str):
         
         Post.delete(id=post_id)
 
+        if post.commented_id:
+            commented = Post.find_one(id=post.commented_id)
+            commented.comments -= 1
+            commented.update()
+
+        if post.reposted_id:
+            reposted = Post.find_one(id=post_id)
+            reposted.reposts -= 1
+            reposted.update()
+
         return jsonify({ "message": "Post deleted successfully" }), 200
     
 
@@ -151,8 +161,8 @@ def reposts(post_id: str):
     if request.method == "POST":
         data = request.get_json()
 
-        text = data.get("text")
-        media_url = data.get("mediaURL", "")
+        text = data.get("text", None)
+        media_url = data.get("mediaURL", None)
 
         try:
             reposted = Post.find_one(id=post_id)
@@ -165,12 +175,7 @@ def reposts(post_id: str):
             if repost:
                 return jsonify({"error": "Cannot repost the same post 2 or more times"}), 400
 
-            if not text and not media_url:
-                repost = Post(user_id=user_id, is_repost=True, reposted_id=reposted.id)
-            else:
-                repost = Post(user_id=user_id, text=text, media_url=media_url, is_repost=True, reposted_id=reposted.id)
-                repost.insert()
-                
+            repost = Post(user_id=user_id, text=text, media_url=media_url, is_repost=True, reposted_id=reposted.id)
             repost.insert()
 
             reposted.reposts += 1
@@ -181,24 +186,41 @@ def reposts(post_id: str):
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
         
-    if request.method == "DELETE":
+
+@bp.route("/<string:post_id>/comments/", methods=["GET", "POST", "DELETE"])
+def comments(post_id: str):
+
+    if request.method == "GET":
         try:
-            reposted = Post.find_one(id=post_id)
+            comments: list[Post] = Post.find_all(commented_id=post_id)
 
+            response = [comment.to_dict() for comment in comments]
+
+            return jsonify(response), 200
+        except Exception as e:
+            print(e)
+            return jsonify({ "error": "Internal Server Error" }), 500
+
+    if request.method == "POST":
+        data = request.get_json()
+
+        text = data.get("text")
+        media_url = data.get("mediaURL", "")
+
+        try:
+            commented = Post.find_one(id=post_id)
+            if not commented:
+                return jsonify({"error": "Commented post not found"}), 404
+            
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
-            user = User.find_one(id=user_id)
 
-            repost = Post.find_one(user_id=user_id, reposted_id=reposted.id, is_repost=True)
+            comment = Post(user_id=user_id, text=text, media_url=media_url, commented_id=commented.id)
+            comment.insert()      
 
-            if not repost:
-                jsonify({ "error": "Repost not found" }), 404
+            commented.comments += 1
+            commented.update()
 
-            Post.delete(id=repost.id)
-
-            reposted.reposts -= 1
-            reposted.update()
-
-            return jsonify({ "message": "Repost deleted successfully" }), 200
+            return jsonify(comment.to_dict()), 201
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
