@@ -5,7 +5,7 @@ from backpack.models.profile.cultural_interest import CulturalInterest, ProfileC
 from backpack.models.profile.general_interest import GeneralInterest, ProfileGeneralInterest
 from backpack.models.profile.language import Language
 from backpack.models.user import User
-from backpack.models.post import Post
+from backpack.models.post.post import Post
 from backpack.utils import jwt
 
 bp = Blueprint("profiles", __name__, url_prefix="/profiles")

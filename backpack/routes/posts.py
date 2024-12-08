@@ -1,45 +1,41 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
-from backpack.models.post import Post
+from backpack.models.post.post import Post
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
-from backpack.models.interaction.like import Like
-from backpack.models.interaction.repost import Repost
+from backpack.models.post.like import Like
 from backpack.utils import jwt
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
 
 @bp.route("/", methods=["GET", "POST"])
 def posts():
-
-    if request.method == "GET":
-        posts = [post for post in Post.find_all()]
-
-        response = []
-
-        for post in posts:
-            result = post.to_dict()
-            result["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
-            response.append(result)
-
-        return jsonify(response), 200
+    try:
+        if request.method == "GET":
+            posts = [post.to_dict() for post in Post.find_all()]
+            return jsonify(posts), 200
     
-    if request.method == "POST":
-        data = request.get_json()
+        if request.method == "POST":
+            data = request.get_json()
 
-        text = data.get("text")
-        media_url = data.get("mediaURL")
-        is_shared_post = data.get("isSharedPost")
+            text = data.get("text")
+            media_url = data.get("mediaURL")
 
-        user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
-        new_post = Post(user=User.find_one(id=user_id), text=text, media_url=media_url, is_shared_post=is_shared_post)
-        new_post.insert()
+            new_post = Post(user_id=user_id, text=text, media_url=media_url)
+            new_post.insert()
 
-        return jsonify(new_post.to_dict()), 201
+            response = new_post.to_dict()
+
+            return jsonify(response), 201
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
-@bp.route("/<string:post_id>", methods=["GET", "PATCH", "DELETE"])
+@bp.route("/<string:post_id>/", methods=["GET", "PATCH", "DELETE"])
 def post(post_id: str):
 
     if request.method == "GET":
@@ -48,7 +44,6 @@ def post(post_id: str):
             return jsonify({"error": "Post not found"}), 404
         
         response = post.to_dict()
-        response["profile"] = Profile.find_one(user=post.user).to_dict(show_user=False)
 
         return jsonify(response), 200
     
@@ -82,12 +77,12 @@ def like(post_id: str):
 
     if request.method == "GET":
         try:
-            likes: list[Like] = Like.find_all(post=Post.find_one(id=post_id))
+            likes: list[Like] = Like.find_all(post_id=post_id)
 
             response = []
 
             for like in likes:
-                profile = Profile.find_one(user=like.user)
+                profile = Profile.find_one(user_id=like.user_id)
                 if profile:
                     response.append(profile.to_dict())
 
@@ -102,13 +97,12 @@ def like(post_id: str):
             post = Post.find_one(id=post_id)
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
-            user = User.find_one(id=user_id)
 
-            like = Like.find_one(user=user, post=post)
+            like = Like.find_one(user_id=user_id, post_id=post_id)
             if like:
                 return jsonify({ "message": "Post already liked" }), 400
 
-            Like(user=user, post=post).insert()
+            Like(user_id=user_id, post_id=post_id).insert()
 
             post.likes += 1
             post.update()
@@ -124,13 +118,12 @@ def like(post_id: str):
             post = Post.find_one(id=post_id)
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
-            user = User.find_one(id=user_id)
 
-            like = Like.find_one(user=user, post=post)
+            like = Like.find_one(user_id=user_id, post_id=post_id)
             if not like:
                 return jsonify({ "message": "Post is not liked" }), 400
 
-            Like.delete(user=user, post=post)
+            Like.delete(user_id=user_id, post_id=post_id)
 
             post.likes -= 1
             post.update()
@@ -146,20 +139,9 @@ def reposts(post_id: str):
 
     if request.method == "GET":
         try:
-            reposts: list[Repost] = Repost.find_all(reposted=Post.find_one(id=post_id))
+            reposts: list[Post] = Post.find_all(reposted_id=post_id, is_repost=True)
 
-            response = []
-
-            for repost in reposts:
-                result = {}
-
-                result["post"] = None if not repost.post else repost.post.to_dict()
-
-                profile = Profile.find_one(user=repost.user)
-                if profile:
-                    result["profile"] = profile.to_dict()
-
-                response.append(result)
+            response = [repost.to_dict() for repost in reposts]
 
             return jsonify(response), 200
         except Exception as e:
@@ -171,7 +153,6 @@ def reposts(post_id: str):
 
         text = data.get("text")
         media_url = data.get("mediaURL", "")
-        is_shared_post = data.get("isSharedPost", False)
 
         try:
             reposted = Post.find_one(id=post_id)
@@ -179,28 +160,23 @@ def reposts(post_id: str):
                 return jsonify({"error": "Reposted post not found"}), 404
             
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
-            user = User.find_one(id=user_id)
 
-            repost = Repost.find_one(user=user, reposted=reposted)
+            repost = Post.find_one(user_id=user_id, reposted_id=reposted.id, is_repost=True)
             if repost:
                 return jsonify({"error": "Cannot repost the same post 2 or more times"}), 400
 
             if not text and not media_url:
-                repost = Repost(user=user,reposted=reposted)
+                repost = Post(user_id=user_id, is_repost=True, reposted_id=reposted.id)
             else:
-                user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
-
-                post = Post(user=user, text=text, media_url=media_url, is_shared_post=is_shared_post)
-                post.insert()
-
-                repost = Repost(user=user, post=post, reposted=reposted)
+                repost = Post(user_id=user_id, text=text, media_url=media_url, is_repost=True, reposted_id=reposted.id)
+                repost.insert()
                 
             repost.insert()
 
             reposted.reposts += 1
             reposted.update()
 
-            return jsonify(repost.to_dict(show_user=False)), 201
+            return jsonify(repost.to_dict()), 201
         except Exception as e:
             print(e)
             return jsonify({ "error": "Internal Server Error" }), 500
@@ -212,14 +188,12 @@ def reposts(post_id: str):
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
             user = User.find_one(id=user_id)
 
-            repost = Repost.find_one(user=user, reposted=reposted)
+            repost = Post.find_one(user_id=user_id, reposted_id=reposted.id, is_repost=True)
 
             if not repost:
                 jsonify({ "error": "Repost not found" }), 404
 
-            Repost.delete(id=repost.id)
-            if repost.post:
-                Post.delete(id=repost.post.id)
+            Post.delete(id=repost.id)
 
             reposted.reposts -= 1
             reposted.update()

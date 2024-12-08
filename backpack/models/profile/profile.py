@@ -12,12 +12,12 @@ class Profile(Model):
     description = Field(String)
     picture_url = Field(String, column="pictureURL")
     banner_url = Field(String, column="bannerURL")
-    user = Field(User, column="userId", unique=True, foreign_key=ForeignKey("userId", String))
+    user_id = Field(String, column="userId", unique=True, foreign_key=ForeignKey("userId", String, table=User))
     location = Field(Location, column="locationId", foreign_key=ForeignKey("locationId", Integer))
     language = Field(Language, column="languageId", foreign_key=ForeignKey("languageId", Integer))
 
     def __init__(self,
-        user: User = None,
+        user_id: String = None,
         display_name: String = None,
         description: String = None,
         picture_url: String = None,
@@ -25,7 +25,7 @@ class Profile(Model):
         location: Location = None,
         language: Language = None
     ):
-        super().__init__(user=user, display_name=display_name, description=description, picture_url=picture_url, banner_url=banner_url, location=location, language=language)
+        super().__init__(user_id=user_id, display_name=display_name, description=description, picture_url=picture_url, banner_url=banner_url, location=location, language=language)
 
     def to_dict(self, show_user: bool = True):
         result = {
@@ -39,6 +39,6 @@ class Profile(Model):
         }
 
         if show_user:
-            result["user"] = self.user.to_dict()
+            result["user"] = User.find_one(id=self.user_id).to_dict()
 
         return result

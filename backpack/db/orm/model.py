@@ -190,7 +190,8 @@ class Model(metaclass=ModelMeta):
             field_name = next((k for k, v in cls.__fields__.items() if v.column == column), None)
             if not field_name:
                 continue
-            if cls.__fields__.get(field_name).foreign_key and value != None:
+            is_model_fk = cls.__fields__.get(field_name).foreign_key and issubclass(cls.__fields__.get(field_name).mapped, Model)
+            if is_model_fk and value != None:
                 primary_key_name: str = [name for name, field in cls.__fields__[field_name].mapped.__fields__.items() if field.primary_key][0]
                 fk = cls.__fields__[field_name].mapped.find_one(**{primary_key_name: value})
                 setattr(instance, field_name, fk)
@@ -274,9 +275,11 @@ class GenerationStrategy(Enum):
 
 class ForeignKey:
 
-    def __init__(self, references: str, type: MappedType):
+    def __init__(self, references: str, type: MappedType = None, table: Model = None, table_name: str = None):
         self.references = references
         self.type = type
+        self.table = table
+        self.table_name = table_name
 
 
 class Field:
@@ -307,11 +310,17 @@ class Field:
 
         auto_increment = "AUTO_INCREMENT" if self.generator == GenerationStrategy.INCREMENT else ""
         primary_key = "PRIMARY KEY" if self.primary_key else ""
-        foreign_key = (
-            f", FOREIGN KEY ({self.column}) REFERENCES {self.mapped.__tablename__}({self.foreign_key.references}) ON DELETE CASCADE"
-            if self.foreign_key
-            else ""
-        )
+
+        foreign_key = ""
+        if self.foreign_key:
+            if issubclass(self.mapped, Model):
+                table = self.mapped.__tablename__
+            elif self.foreign_key.table:
+                table = self.foreign_key.table.__tablename__
+            else: table = self.foreign_key.table_name
+            foreign_key = (
+                f", FOREIGN KEY ({self.column}) REFERENCES {table}({self.foreign_key.references}) ON DELETE CASCADE"
+            )
 
         return " ".join(filter(None, [self.mapped.name if not self.foreign_key else self.foreign_key.type.name, not_null, unique, default, auto_increment, primary_key, foreign_key]))
     
