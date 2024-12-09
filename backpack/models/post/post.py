@@ -2,6 +2,7 @@ from backpack.db.orm.model import table, Model, Field, GenerationStrategy, Forei
 from backpack.db.orm.types import String, DateTime, Integer, Boolean
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
+from backpack.models.post.media import Media
 
 @table("Post")
 class Post(Model):
@@ -9,7 +10,6 @@ class Post(Model):
     id = Field(String, column="postId", primary_key=True, generator=GenerationStrategy.NANOID)
     user_id = Field(String, column="userId", required=True, foreign_key=ForeignKey("userId", String, table=User))
     text = Field(String)
-    media_url = Field(String, column="mediaURL")
     likes = Field(Integer, required=True, default=0)
     reposts = Field(Integer, required=True, default=0)
     comments = Field(Integer, required=True, default=0)
@@ -24,16 +24,15 @@ class Post(Model):
     def __init__(self,
         user_id: String = None,
         text: String = None,
-        media_url: String = None,
         is_repost: Boolean = False,
         reposted_id: String = None,
         commented_id: String = None
     ):
         repost_type = None
         if is_repost:
-            repost_type = "quote" if text or media_url else "simple"
+            repost_type = "quote" if text else "simple"
 
-        super().__init__(user_id=user_id, text=text, media_url=media_url, is_repost=is_repost, reposted_id=reposted_id, commented_id=commented_id, repost_type=repost_type)
+        super().__init__(user_id=user_id, text=text, is_repost=is_repost, reposted_id=reposted_id, commented_id=commented_id, repost_type=repost_type)
 
     def to_dict(self, show_profile: bool = True):
         if self.repost_type == "simple":
@@ -48,7 +47,7 @@ class Post(Model):
             result = {
                 "postId": self.id,
                 "text": self.text,
-                "mediaURL": self.media_url,
+                "mediaURLs": [media.url for media in Media.find_all(post_id=self.id)],
                 "likes": self.likes,
                 "reposts": self.reposts,
                 "comments": self.comments,

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from backpack.models.post.post import Post
-from backpack.models.user import User
+from backpack.models.post.media import Media
 from backpack.models.profile.profile import Profile
 from backpack.models.post.like import Like
 from backpack.utils import jwt
@@ -19,12 +19,15 @@ def posts():
             data = request.get_json()
 
             text = data.get("text")
-            media_url = data.get("mediaURL")
+            media_urls = data.get("mediaURLs")
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
-            new_post = Post(user_id=user_id, text=text, media_url=media_url)
+            new_post = Post(user_id=user_id, text=text)
             new_post.insert()
+
+            for media_url in media_urls:
+                Media(url=media_url, post_id=new_post.id).insert()
 
             response = new_post.to_dict()
 
@@ -162,7 +165,7 @@ def reposts(post_id: str):
         data = request.get_json()
 
         text = data.get("text", None)
-        media_url = data.get("mediaURL", None)
+        media_urls = data.get("mediaURLs", None)
 
         try:
             reposted = Post.find_one(id=post_id)
@@ -175,8 +178,11 @@ def reposts(post_id: str):
             if repost:
                 return jsonify({"error": "Cannot repost the same post 2 or more times"}), 400
 
-            repost = Post(user_id=user_id, text=text, media_url=media_url, is_repost=True, reposted_id=reposted.id)
+            repost = Post(user_id=user_id, text=text, is_repost=True, reposted_id=reposted.id)
             repost.insert()
+
+            for media_url in media_urls:
+                Media(url=media_url, post_id=repost.id).insert()
 
             reposted.reposts += 1
             reposted.update()
@@ -205,7 +211,7 @@ def comments(post_id: str):
         data = request.get_json()
 
         text = data.get("text")
-        media_url = data.get("mediaURL", "")
+        media_urls = data.get("mediaURLs", "")
 
         try:
             commented = Post.find_one(id=post_id)
@@ -214,8 +220,11 @@ def comments(post_id: str):
             
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
-            comment = Post(user_id=user_id, text=text, media_url=media_url, commented_id=commented.id)
-            comment.insert()      
+            comment = Post(user_id=user_id, text=text, commented_id=commented.id)
+            comment.insert()
+
+            for media_url in media_urls:
+                Media(url=media_url, post_id=comment.id).insert()
 
             commented.comments += 1
             commented.update()
