@@ -32,7 +32,7 @@ def profiles():
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
             profile = Profile(
-                user=User.find_one(id=user_id), 
+                user_id=user_id, 
                 display_name=display_name,
                 description=description,
                 picture_url=picture_url,

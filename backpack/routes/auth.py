@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 from datetime import date, datetime
 from backpack.models.user import User
+from backpack.models.profile.profile import Profile
 from backpack.utils import hashing
 from backpack.utils import emailing
 from backpack.utils import jwt
@@ -101,6 +102,7 @@ def register():
             verification_token = new_user.generate_verification_token()
 
             new_user.insert()
+            Profile(user_id=new_user.id).insert()
 
             emailing.send_verification_token(new_user.email, verification_token)
                 

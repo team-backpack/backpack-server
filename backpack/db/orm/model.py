@@ -218,7 +218,7 @@ class Model(metaclass=ModelMeta):
                 self.related_model: Model = None
 
             def where(self, **conditions):
-                clause, where_params = self.model._build_where_clause(conditions)
+                clause, where_params = self.model._build_where_clause(**conditions)
                 query_parts["where"] = f"WHERE {clause}" if clause else ""
                 params.extend(where_params)
                 return self
