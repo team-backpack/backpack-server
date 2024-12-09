@@ -40,56 +40,59 @@ def posts():
 
 @bp.route("/<string:post_id>/", methods=["GET", "PATCH", "DELETE"])
 def post(post_id: str):
+    try:
+        if request.method == "GET":
+            post = Post.find_one(id=post_id)
+            if not post:
+                return jsonify({"error": "Post not found"}), 404
+            
+            response = post.to_dict()
 
-    if request.method == "GET":
-        post = Post.find_one(id=post_id)
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
+            return jsonify(response), 200
         
-        response = post.to_dict()
+        if request.method == "PATCH":
+            data = request.get_json()
 
-        return jsonify(response), 200
-    
-    if request.method == "PATCH":
-        data = request.get_json()
+            text = data.get("text")
 
-        text = data.get("text")
+            post = Post.find_one(id=post_id)
+            if not post:
+                return jsonify({"error": "Post not found"}), 404
+            
+            post.text = text
+            post.was_edited_at = datetime.now()
+            post.update()
 
-        post = Post.find_one(id=post_id)
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
+            return jsonify(post.to_dict()), 200
         
-        post.text = text
-        post.was_edited_at = datetime.now()
-        post.update()
+        if request.method == "DELETE":
+            post = Post.find_one(id=post_id)
+            if not post:
+                return jsonify({"error": "Post not found"}), 404
+            
+            Post.delete(id=post_id)
 
-        return jsonify(post.to_dict()), 200
-    
-    if request.method == "DELETE":
-        post = Post.find_one(id=post_id)
-        if not post:
-            return jsonify({"error": "Post not found"}), 404
+            if post.commented_id:
+                commented = Post.find_one(id=post.commented_id)
+                commented.comments -= 1
+                commented.update()
+
+            if post.reposted_id:
+                reposted = Post.find_one(id=post_id)
+                reposted.reposts -= 1
+                reposted.update()
+
+            return jsonify({ "message": "Post deleted successfully" }), 200
         
-        Post.delete(id=post_id)
-
-        if post.commented_id:
-            commented = Post.find_one(id=post.commented_id)
-            commented.comments -= 1
-            commented.update()
-
-        if post.reposted_id:
-            reposted = Post.find_one(id=post_id)
-            reposted.reposts -= 1
-            reposted.update()
-
-        return jsonify({ "message": "Post deleted successfully" }), 200
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
     
 
 @bp.route("/<string:post_id>/likes/", methods=["GET", "POST", "DELETE"])
 def like(post_id: str):
-
-    if request.method == "GET":
-        try:
+    try:
+        if request.method == "GET":
             likes: list[Like] = Like.find_all(post_id=post_id)
 
             response = []
@@ -100,13 +103,8 @@ def like(post_id: str):
                     response.append(profile.to_dict())
 
             return jsonify(response), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
-        
-    if request.method == "POST":
-
-        try:
+            
+        if request.method == "POST":
             post = Post.find_one(id=post_id)
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
@@ -121,13 +119,8 @@ def like(post_id: str):
             post.update()
 
             return jsonify({ "message": "Post liked successfully" }), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
-        
-    if request.method == "DELETE":
-
-        try:
+            
+        if request.method == "DELETE":
             post = Post.find_one(id=post_id)
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
@@ -142,32 +135,28 @@ def like(post_id: str):
             post.update()
 
             return jsonify({ "message": "Post disliked successfully" }), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
         
 
 @bp.route("/<string:post_id>/reposts/", methods=["GET", "POST", "DELETE"])
 def reposts(post_id: str):
-
-    if request.method == "GET":
-        try:
+    try:
+        if request.method == "GET":
             reposts: list[Post] = Post.find_all(reposted_id=post_id, is_repost=True)
 
             response = [repost.to_dict() for repost in reposts]
-
             return jsonify(response), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+        
 
-    if request.method == "POST":
-        data = request.get_json()
+        if request.method == "POST":
+            data = request.get_json()
 
-        text = data.get("text", None)
-        media_urls = data.get("mediaURLs", None)
+            text = data.get("text", None)
+            media_urls = data.get("mediaURLs", None)
 
-        try:
             reposted = Post.find_one(id=post_id)
             if not reposted:
                 return jsonify({"error": "Reposted post not found"}), 404
@@ -188,32 +177,28 @@ def reposts(post_id: str):
             reposted.update()
 
             return jsonify(repost.to_dict()), 201
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
         
 
 @bp.route("/<string:post_id>/comments/", methods=["GET", "POST", "DELETE"])
 def comments(post_id: str):
-
-    if request.method == "GET":
-        try:
+    try:
+        if request.method == "GET":
             comments: list[Post] = Post.find_all(commented_id=post_id)
 
             response = [comment.to_dict() for comment in comments]
 
             return jsonify(response), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
 
-    if request.method == "POST":
-        data = request.get_json()
+        if request.method == "POST":
+            data = request.get_json()
 
-        text = data.get("text")
-        media_urls = data.get("mediaURLs", "")
+            text = data.get("text")
+            media_urls = data.get("mediaURLs", "")
 
-        try:
             commented = Post.find_one(id=post_id)
             if not commented:
                 return jsonify({"error": "Commented post not found"}), 404
@@ -230,6 +215,7 @@ def comments(post_id: str):
             commented.update()
 
             return jsonify(comment.to_dict()), 201
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500

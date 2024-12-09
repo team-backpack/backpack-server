@@ -12,60 +12,67 @@ bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 @bp.route("/logout/", methods=["POST"])
 def logout():
-
-    if request.method == "POST":
-        response = make_response(jsonify({ "message": "Logged out successfully" }), 200)
-        response.set_cookie("jwt", "")
-        return response
+    try:
+        if request.method == "POST":
+            response = make_response(jsonify({ "message": "Logged out successfully" }), 200)
+            response.set_cookie("jwt", "")
+            return response
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
 @bp.route("/login/", methods=["POST"])
 def login():
+    try:
+        if request.method == "POST":
+            data = request.get_json()
 
-    if request.method == "POST":
-        data = request.get_json()
+            username = data.get("username")
+            email = data.get("email")
+            password = data.get("password")
 
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
+            if not password or not (username or email):
+                return jsonify({"error": "Missing fields"}), 400
+            
+            user = User.find_one(username=username) if username else User.find_one(email=email)
 
-        if not password or not (username or email):
-            return jsonify({"error": "Missing fields"}), 400
-        
-        user = User.find_one(username=username) if username else User.find_one(email=email)
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+            
+            is_password_correct = hashing.check(password, user.password)
 
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-        
-        is_password_correct = hashing.check(password, user.password)
+            if not is_password_correct or not (user.username == username or user.email == email):
+                return jsonify({"error": "Incorrect credentials"}), 401
+            
+            if not user.verified:
+                return jsonify({"error": "User is not verified"}), 403
 
-        if not is_password_correct or not (user.username == username or user.email == email):
-            return jsonify({"error": "Incorrect credentials"}), 401
-        
-        if not user.verified:
-            return jsonify({"error": "User is not verified"}), 403
-
-        response = make_response(jsonify({ "id": user.id }), 200)
-        response = jwt.set_jwt_cookie(response, user.id, user.username)
-        return response
+            response = make_response(jsonify({ "id": user.id }), 200)
+            response = jwt.set_jwt_cookie(response, user.id, user.username)
+            return response
+    
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
 @bp.route("/register/", methods=["POST"])
 def register():
-    
-    if request.method == "POST":
-        data = request.get_json()
-        
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
-        confirmed_password = data.get("confirmedPassword")
-        birth_date = data.get("birthDate")
+    try:
+        if request.method == "POST":
+            data = request.get_json()
+            
+            username = data.get("username")
+            email = data.get("email")
+            password = data.get("password")
+            confirmed_password = data.get("confirmedPassword")
+            birth_date = data.get("birthDate")
 
-        if not all((username, email, password, confirmed_password, birth_date)):
-            return jsonify({"error": "Missing fields"}), 400
+            if not all((username, email, password, confirmed_password, birth_date)):
+                return jsonify({"error": "Missing fields"}), 400
 
-        try:
             username_regex = re.compile(r'^[a-zA-Z0-9_.]+$')
             is_username_valid = bool(username_regex.match(username)) and (2 <= len(username) <= 20)
             if not is_username_valid:
@@ -109,22 +116,21 @@ def register():
             response = make_response(jsonify({ "id": new_user.id }), 201)
             response = jwt.set_jwt_cookie(response, new_user.id, new_user.id)
             return response
-        
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+            
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
 @bp.route("/verify/<string:user_id>/", methods=["POST"])
 def verify(user_id: str):
+    try:
+        if request.method == "POST":
+            verification_token = request.get_json().get("verificationToken")
 
-    if request.method == "POST":
-        verification_token = request.get_json().get("verificationToken")
+            if not verification_token:
+                return jsonify({"error": "Missing fields"}), 400
 
-        if not verification_token:
-            return jsonify({"error": "Missing fields"}), 400
-
-        try:
             user: User = User.find_one(id=user_id)
             if not user:
                 return jsonify({"error": "User not found"}), 404
@@ -142,17 +148,16 @@ def verify(user_id: str):
             user.update()
             
             return jsonify({ "message": "User is now verified" }), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
         
 
 @bp.route("/resend-token/<string:user_id>/", methods=["POST"])
 def resend_token(user_id: str):
-
-    if request.method == "POST":
-
-        try:
+    try:
+        if request.method == "POST":
             user: User = User.select().where(id=user_id).one()
 
             if user.verified:
@@ -164,9 +169,10 @@ def resend_token(user_id: str):
             emailing.send_verification_token(user.email, verification_token)
             
             return jsonify({"message": "Token resent successfully"}), 200
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
 def is_verification_token_expired(token_sent_at: datetime):

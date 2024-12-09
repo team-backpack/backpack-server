@@ -12,23 +12,23 @@ bp = Blueprint("profiles", __name__, url_prefix="/profiles")
 
 @bp.route("/", methods=["POST"])
 def profiles():
+    try:
+        
+        if request.method == "POST":
+            data = request.get_json()
 
-    if request.method == "POST":
-        data = request.get_json()
+            display_name = data.get("displayName")
+            description = data.get("description")
+            picture_url = data.get("pictureURL")
+            banner_url = data.get("bannerURL")
+            location = data.get("location")
+            language = data.get("language")
+            cultural_interests = data.get("culturalInterests")
+            general_interests = data.get("generalInterests")
 
-        display_name = data.get("displayName")
-        description = data.get("description")
-        picture_url = data.get("pictureURL")
-        banner_url = data.get("bannerURL")
-        location = data.get("location")
-        language = data.get("language")
-        cultural_interests = data.get("culturalInterests")
-        general_interests = data.get("generalInterests")
+            if not all((display_name, description, picture_url, banner_url)):
+                return jsonify({"error": "Missing fields"}), 400
 
-        if not all((display_name, description, picture_url, banner_url)):
-            return jsonify({"error": "Missing fields"}), 400
-
-        try:
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
             profile = Profile(
@@ -72,17 +72,16 @@ def profiles():
 
             return jsonify(response), 201
 
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
 
 
 @bp.route("/<string:username>", methods=["GET"])
 def profile(username: str):
+    try:
+        if request.method == "GET":
 
-    if request.method == "GET":
-
-        try:
             user = User.find_one(username=username)
             if not user:
                 return jsonify({"error": "User not found"}), 404
@@ -103,6 +102,6 @@ def profile(username: str):
 
             return jsonify(response), 200
 
-        except Exception as e:
-            print(e)
-            return jsonify({ "error": "Internal Server Error" }), 500
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
