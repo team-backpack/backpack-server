@@ -10,6 +10,7 @@ def messages():
         if request.method == "GET":
             messages = [message.to_dict() for message in Message.find_all()]
             return jsonify(messages), 200
+        
     except Exception as e:
         print(e)
         return jsonify({ "error": "Internal Server Error" }), 500
@@ -17,7 +18,6 @@ def messages():
 @bp.route("/<string:receiver_id>/", methods=["GET", "POST"])
 def conversation(receiver_id: str):
     try:
-
         if request.method == "GET":
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
