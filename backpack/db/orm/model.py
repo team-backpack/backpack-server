@@ -62,11 +62,11 @@ class Model(metaclass=ModelMeta):
         raise AttributeError(f"{name} not found")
 
     @classmethod
-    def _build_where_clause(self, **where):
+    def _build_where_clause(self, operator: str, **where):
         fields = {k: v.column for k, v in self.__fields__.items()}
         valid_keys = [key for key in where.keys() if key in fields]
         valid_columns = [fields[key] for key in valid_keys]
-        clause = " AND ".join([f"{key} = %s" for key in valid_columns])
+        clause = f" {operator} ".join([f"{key} = %s" for key in valid_columns])
         params = [where[key].id if issubclass(type(where[key]), Model) else where[key] for key in valid_keys]
         return clause, params
 
@@ -117,10 +117,10 @@ class Model(metaclass=ModelMeta):
                 conn.commit()
 
     @classmethod
-    def find_one(self, **where):
+    def find_one(self, operator: str = "AND", **where):
         self.create_table()
 
-        where_clause, params = self._build_where_clause(**where)
+        where_clause, params = self._build_where_clause(operator=operator, **where)
 
         sql = f"""
             SELECT * FROM {self.__tablename__}
@@ -134,10 +134,10 @@ class Model(metaclass=ModelMeta):
                 return self._generate_model(cursor.fetchone())
 
     @classmethod         
-    def find_all(self, **where):
+    def find_all(self, operator: str = "AND", **where):
         self.create_table()
 
-        where_clause, params = self._build_where_clause(**where)
+        where_clause, params = self._build_where_clause(operator=operator,**where)
 
         sql = f"""
             SELECT * FROM {self.__tablename__}
@@ -217,8 +217,8 @@ class Model(metaclass=ModelMeta):
                 self.model = model
                 self.related_model: Model = None
 
-            def where(self, **conditions):
-                clause, where_params = self.model._build_where_clause(**conditions)
+            def where(self, operator: str = "AND", **conditions):
+                clause, where_params = self.model._build_where_clause(operator=operator, **conditions)
                 query_parts["where"] = f"WHERE {clause}" if clause else ""
                 params.extend(where_params)
                 return self

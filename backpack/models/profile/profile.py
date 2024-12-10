@@ -8,7 +8,7 @@ from backpack.models.profile.language import Language
 class Profile(Model):
 
     id = Field(String, column="profileId", primary_key=True, generator=GenerationStrategy.NANOID)
-    display_name = Field(String, column="displayName", required=True)
+    display_name = Field(String, column="displayName")
     description = Field(String)
     picture_url = Field(String, column="pictureURL")
     banner_url = Field(String, column="bannerURL")

@@ -109,7 +109,7 @@ def register():
             verification_token = new_user.generate_verification_token()
 
             new_user.insert()
-            Profile(user_id=new_user.id).insert()
+            Profile(user_id=new_user.id, display_name="").insert()
 
             emailing.send_verification_token(new_user.email, verification_token)
                 
