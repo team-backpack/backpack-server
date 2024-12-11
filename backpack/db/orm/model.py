@@ -5,6 +5,22 @@ from uuid import uuid4
 import nanoid
 from datetime import date, datetime
 
+class GenerationStrategy(Enum):
+    UUID = uuid4
+    NANOID = nanoid.generate
+    INCREMENT = None
+
+def NOW():
+    return datetime.now()
+
+def TODAY():
+    return date.today()
+
+class Default(Enum):
+    NOW = NOW
+    TODAY = TODAY
+
+
 class ModelMeta(type):
     def __new__(cls, name, bases, dct):
         if name == "Model":
@@ -36,6 +52,8 @@ class Model(metaclass=ModelMeta):
             
             if field.generator == GenerationStrategy.UUID or field.generator == GenerationStrategy.NANOID:
                 setattr(self, field_name, args.get(field_name, str(field.generator())))
+            elif field.default == Default.NOW or field.default == Default.TODAY:
+                setattr(self, field_name, args.get(field_name, field.default()))
             else:
                 setattr(self, field_name, args.get(field_name, field.default))
 
@@ -106,6 +124,7 @@ class Model(metaclass=ModelMeta):
             INSERT INTO {self.__tablename__} ({", ".join(columns)})
             VALUES ({", ".join(["%s"] * len(params))})
         """
+        print(sql, params)
 
         with create_connection() as conn:
             with conn.cursor() as cursor:
@@ -166,10 +185,33 @@ class Model(metaclass=ModelMeta):
                 conn.commit()
 
     @classmethod
-    def delete(self, **where):
+    def patch(self, id = None, **fields):
+        params = []
+        columns = []
+
+        for field, value in fields.items():
+            if field in self.__fields__:
+                params.append(value)
+                columns.append(self.__fields__[field].column)
+
+        sql = f"""
+            UPDATE {self.__tablename__}
+            SET {", ".join([f"{column} = %s" for column in columns])}
+            WHERE {next(field.column for field in self.__fields__.values() if field.primary_key)} = %s
+        """
+
+        params.append(id)
+        
+        with create_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(sql, tuple(params))
+                conn.commit()
+
+    @classmethod
+    def delete(self, operator: str = "AND", **where):
         self.create_table()
         
-        where_clause, params = self._build_where_clause(**where)
+        where_clause, params = self._build_where_clause(operator=operator, **where)
 
         sql = f"""
             DELETE FROM {self.__tablename__}
@@ -219,13 +261,22 @@ class Model(metaclass=ModelMeta):
 
             def where(self, operator: str = "AND", **conditions):
                 clause, where_params = self.model._build_where_clause(operator=operator, **conditions)
-                query_parts["where"] = f"WHERE {clause}" if clause else ""
+                if query_parts["where"]:
+                    query_parts["where"] += f" {operator} ({clause})"
+                else:
+                    query_parts["where"] = f"WHERE ({clause})"
                 params.extend(where_params)
                 return self
 
+            def or_where(self, **conditions):
+                return self.where(operator="OR", **conditions)
+
+            def and_where(self, **conditions):
+                return self.where(operator="AND", **conditions)
+
             def order_by(self, *columns, descending=False):
                 fields = {k: v.column for k, v in self.model.__fields__.items()}
-                valid_columns = [fields[col] for col in columns if col in fields]
+                valid_columns = [fields[col] for col in columns if col in fields.keys()]
                 if valid_columns:
                     direction = "DESC" if descending else "ASC"
                     query_parts["order_by"] = f"ORDER BY {', '.join(valid_columns)} {direction}"
@@ -266,13 +317,6 @@ def table(name: str):
         return cls
     return wrapper
 
-
-class GenerationStrategy(Enum):
-    UUID = uuid4
-    NANOID = nanoid.generate
-    INCREMENT = None
-
-
 class ForeignKey:
 
     def __init__(self, references: str, type: MappedType = None, table: Model = None, table_name: str = None):
@@ -284,7 +328,7 @@ class ForeignKey:
 
 class Field:
     
-    def __init__(self, mapped: MappedType | Model, column: str = "", required: bool = False, unique: bool = False, primary_key: bool = False, foreign_key: ForeignKey = None, default: MappedType | type = None, generator: GenerationStrategy = None):
+    def __init__(self, mapped: MappedType | Model, column: str = "", required: bool = False, unique: bool = False, primary_key: bool = False, foreign_key: ForeignKey = None, default: MappedType | type | Default = None, generator: GenerationStrategy = None):
         self.column = column
         self.required = required
         self.unique = unique
@@ -299,14 +343,14 @@ class Field:
         unique = "UNIQUE" if self.unique else ""
         
         default = ""
-        if self.default and not isinstance(self.default, (date, datetime, bool)):
-            default = f"DEFAULT {self.default}"
-        elif isinstance(self.default, datetime):
+        if self.default == Default.NOW:
             default = "DEFAULT CURRENT_TIMESTAMP"
-        elif isinstance(self.default, date):
+        elif self.default == Default.TODAY:
             default = "DEFAULT CURRENT_DATE"
         elif isinstance(self.default, bool):
             default = "DEFAULT TRUE" if self.default else "DEFAULT FALSE"
+        elif self.default:
+            default = f"DEFAULT {self.default}"
 
         auto_increment = "AUTO_INCREMENT" if self.generator == GenerationStrategy.INCREMENT else ""
         primary_key = "PRIMARY KEY" if self.primary_key else ""
@@ -321,7 +365,7 @@ class Field:
             foreign_key = (
                 f", FOREIGN KEY ({self.column}) REFERENCES {table}({self.foreign_key.references}) ON DELETE CASCADE"
             )
-
+        
         return " ".join(filter(None, [self.mapped.name if not self.foreign_key else self.foreign_key.type.name, not_null, unique, default, auto_increment, primary_key, foreign_key]))
     
     def __str__(self):

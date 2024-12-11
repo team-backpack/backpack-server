@@ -1,4 +1,4 @@
-from backpack.db.orm.model import table, Model, Field, GenerationStrategy, ForeignKey
+from backpack.db.orm.model import table, Model, Field, GenerationStrategy, ForeignKey, Default
 from backpack.db.orm.types import String, DateTime, Integer, Boolean
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
@@ -18,8 +18,8 @@ class Post(Model):
     repost_type = Field(String, column="repostType")
     commented_id = Field(String, column="commentedId", foreign_key=ForeignKey("postId", String, table_name="Post"))
     was_edited_at = Field(DateTime, column="wasEditedAt")
-    created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
-    updated_at = Field(DateTime, column="updatedAt", required=True, default=DateTime.now())
+    created_at = Field(DateTime, column="createdAt", required=True, default=Default.NOW)
+    updated_at = Field(DateTime, column="updatedAt", required=True, default=Default.NOW)
 
     def __init__(self,
         user_id: String = None,

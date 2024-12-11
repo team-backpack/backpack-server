@@ -1,4 +1,4 @@
-from backpack.db.orm.model import table, Model, Field, GenerationStrategy, ForeignKey
+from backpack.db.orm.model import table, Model, Field, GenerationStrategy, ForeignKey, Default
 from backpack.db.orm.types import String, DateTime, Boolean
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
@@ -12,7 +12,7 @@ class Message(Model):
     text = Field(String, required=True)
     seen = Field(Boolean, required=True, default=False)
     was_edited_at = Field(DateTime, column="wasEditedAt")
-    created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
+    created_at = Field(DateTime, column="createdAt", required=True, default=Default.NOW)
 
     def __init__(self,
         sender_id: String = None,
