@@ -77,7 +77,7 @@ def profiles():
         return jsonify({ "error": "Internal Server Error" }), 500
 
 
-@bp.route("/<string:username>", methods=["GET"])
+@bp.route("/<string:username>/", methods=["GET"])
 def profile(username: str):
     try:
         if request.method == "GET":

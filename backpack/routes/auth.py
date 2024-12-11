@@ -5,7 +5,7 @@ from backpack.models.profile.profile import Profile
 from backpack.utils import hashing
 from backpack.utils import emailing
 from backpack.utils import jwt
-import re
+from backpack.utils import validation
 import email_validator
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -73,9 +73,7 @@ def register():
             if not all((username, email, password, confirmed_password, birth_date)):
                 return jsonify({"error": "Missing fields"}), 400
 
-            username_regex = re.compile(r'^[a-zA-Z0-9_.]+$')
-            is_username_valid = bool(username_regex.match(username)) and (2 <= len(username) <= 20)
-            if not is_username_valid:
+            if not validation.is_name_valid(username):
                 return jsonify({"error": "Invalid username"}), 400
             
             try:
@@ -109,7 +107,7 @@ def register():
             verification_token = new_user.generate_verification_token()
 
             new_user.insert()
-            Profile(user_id=new_user.id, display_name="").insert()
+            Profile(user_id=new_user.id).insert()
 
             emailing.send_verification_token(new_user.email, verification_token)
                 

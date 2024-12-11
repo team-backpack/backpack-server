@@ -124,7 +124,6 @@ class Model(metaclass=ModelMeta):
             INSERT INTO {self.__tablename__} ({", ".join(columns)})
             VALUES ({", ".join(["%s"] * len(params))})
         """
-        print(sql, params)
 
         with create_connection() as conn:
             with conn.cursor() as cursor:
@@ -153,7 +152,7 @@ class Model(metaclass=ModelMeta):
                 return self._generate_model(cursor.fetchone())
 
     @classmethod         
-    def find_all(self, operator: str = "AND", **where):
+    def find_all(self, operator: str = "AND", limit: int = None, offset: int = None, **where):
         self.create_table()
 
         where_clause, params = self._build_where_clause(operator=operator,**where)
@@ -161,6 +160,7 @@ class Model(metaclass=ModelMeta):
         sql = f"""
             SELECT * FROM {self.__tablename__}
             {f"WHERE {where_clause}" if where_clause else ""}
+            {f"LIMIT {limit}" if limit else ""} {f"OFFSET {offset}" if offset else ""}
         """
 
         with create_connection() as conn:
@@ -359,6 +359,7 @@ class Field:
         if self.foreign_key:
             if issubclass(self.mapped, Model):
                 table = self.mapped.__tablename__
+                self.mapped.create_table()
             elif self.foreign_key.table:
                 table = self.foreign_key.table.__tablename__
             else: table = self.foreign_key.table_name

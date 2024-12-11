@@ -1,21 +1,85 @@
-from backpack.db.orm.model import table, Model, Field, GenerationStrategy
-from backpack.db.orm.types import String, DateTime
+from backpack.db.orm.model import table, Model, Field, GenerationStrategy, Default, ForeignKey
+from backpack.db.orm.types import String, DateTime, Boolean
+from backpack.models.user import User
+from backpack.models.profile.profile import Profile
 
 @table("Community")
 class Community(Model):
 
     id = Field(String, column="communityId", primary_key=True, generator=GenerationStrategy.UUID)
-    description = Field(String, required=True)
-    display_name = Field(String, required=True)
     name = Field(String, required=True, unique=True)
-    banner_url = Field(String, column="bannerUrl", required=True)
-    created_at = Field(DateTime, column="createdAt", required=True, default=DateTime.now())
+    display_name = Field(String, column="displayName", required=True)
+    description = Field(String, required=True)
+    banner_url = Field(String, column="bannerURL", required=True)
+    created_at = Field(DateTime, column="createdAt", required=True, default=Default.NOW)
+    updated_at = Field(DateTime, column="updatedAt", required=True, default=Default.NOW)
 
     def __init__(self,
-        description: String = None,
-        display_name: String = None,
         name: String = None,
+        display_name: String = None,
+        description: String = None,        
         banner_url: String = None
     ):
         super().__init__(description=description, display_name=display_name, name=name, banner_url=banner_url)
+
+    def to_dict(self, show_participants: bool = False, show_participants_ids: bool = False):
+        result =  {
+            "communityId": self.id,
+            "name": self.name,
+            "displayName": self.display_name,
+            "description": self.description,
+            "bannerURL": self.banner_url,
+            "createdAt": self.created_at,
+            "updatedAt": self.updated_at
+        }
+
+        if show_participants or show_participants_ids:
+            result["participants"] = { "administrators": [], "moderators": [], "members": [] }
+            participants = Participant.find_all(community_id=self.id, limit=10)
+
+            for participant in participants:
+                obj = participant.to_dict() if show_participants else participant.user_id
+
+                if participant.role == "admin":
+                    result["participants"]["administrators"].append(obj)
+
+                if participant.role == "moderator":
+                    result["participants"]["moderators"].append(obj)
+
+                if participant.role == "member":
+                    result["participants"]["members"].append(obj)
+
+        return result
+    
+
+@table("Participant")
+class Participant(Model):
+
+    id = Field(String, column="participantId", primary_key=True, generator=GenerationStrategy.NANOID)
+    user_id = Field(String, column="userId", required=True, foreign_key=ForeignKey("userId", String, table=User))
+    community_id = Field(String, column="communityId", required=True, foreign_key=ForeignKey("communityId", String, table=Community))
+    role = Field(String, required=True)
+    is_suspended = Field(Boolean, required=True, default=False)
+    since = Field(DateTime, required=True, default=Default.NOW)
+
+    def __init__(self,
+        user_id: String = None,
+        community_id: String = None,
+        role: String = "member"
+    ):
+        super().__init__(user_id=user_id, community_id=community_id, role=role)
+
+    def to_dict(self, show_profile: bool = True):
+        result =  {
+            "participantId": self.id,
+            "communityId": self.community_id,
+            "role": self.role,
+            "isSuspended": self.is_suspended,
+            "since": self.since
+        }
+
+        if show_profile:
+            result["profile"] = Profile.find_one(user_id=self.user_id).to_dict()
+
+        return result
     
