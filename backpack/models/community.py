@@ -2,6 +2,7 @@ from backpack.db.orm.model import table, Model, Field, GenerationStrategy, Defau
 from backpack.db.orm.types import String, DateTime, Boolean
 from backpack.models.user import User
 from backpack.models.profile.profile import Profile
+from backpack.utils.constants import role_to_response
 
 @table("Community")
 class Community(Model):
@@ -40,14 +41,11 @@ class Community(Model):
             for participant in participants:
                 obj = participant.to_dict() if show_participants else participant.user_id
 
-                if participant.role == "admin":
-                    result["participants"]["administrators"].append(obj)
+                key = ""
+                if participant.role in role_to_response.keys():
+                    key = role_to_response[participant.role]
 
-                if participant.role == "moderator":
-                    result["participants"]["moderators"].append(obj)
-
-                if participant.role == "member":
-                    result["participants"]["members"].append(obj)
+                result["participants"][key].append(obj)
 
         return result
     
@@ -69,7 +67,7 @@ class Participant(Model):
     ):
         super().__init__(user_id=user_id, community_id=community_id, role=role)
 
-    def to_dict(self, show_profile: bool = True):
+    def to_dict(self, show_profile: bool = True, show_user_id: bool = False):
         result =  {
             "participantId": self.id,
             "communityId": self.community_id,
@@ -80,6 +78,9 @@ class Participant(Model):
 
         if show_profile:
             result["profile"] = Profile.find_one(user_id=self.user_id).to_dict()
+        
+        if show_user_id:
+            result["userId"] = self.user_id
 
         return result
     
