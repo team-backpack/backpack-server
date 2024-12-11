@@ -41,6 +41,8 @@ def posts():
 @bp.route("/<string:post_id>/", methods=["GET", "PATCH", "DELETE"])
 def post(post_id: str):
     try:
+        user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+
         if request.method == "GET":
             post = Post.find_one(id=post_id)
             if not post:
@@ -58,6 +60,9 @@ def post(post_id: str):
             post = Post.find_one(id=post_id)
             if not post:
                 return jsonify({"error": "Post not found"}), 404
+
+            if post.user_id != user_id:
+                return jsonify({"error": "Do not have permission to edit this post"}), 401
             
             post.text = text
             post.was_edited_at = datetime.now()
@@ -69,6 +74,9 @@ def post(post_id: str):
             post = Post.find_one(id=post_id)
             if not post:
                 return jsonify({"error": "Post not found"}), 404
+            
+            if post.user_id != user_id:
+                return jsonify({"error": "Do not have permission to delete this post"}), 401
             
             Post.delete(id=post_id)
 
