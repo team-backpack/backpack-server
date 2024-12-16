@@ -250,7 +250,8 @@ class Model(metaclass=ModelMeta):
             "where": "",
             "order_by": "",
             "join": "",
-            "limit": ""
+            "limit": "",
+            "offset": ""
         }
         params = []
 
@@ -290,9 +291,12 @@ class Model(metaclass=ModelMeta):
                 query_parts["join"] += f" INNER JOIN {related_table} ON {self.model.__tablename__}.{on_column} = {related_table}.{to_column}"
                 return self
 
-            def execute(self, limit: int = None):
+            def execute(self, limit: int = None, offset: int = None):
                 if limit:
                     query_parts["limit"] = f"LIMIT {limit}"
+                
+                if offset:
+                    query_parts["offset"] = f"OFFSET {offset}"
 
                 query = " ".join(part for part in query_parts.values() if part)
                 with create_connection() as conn:

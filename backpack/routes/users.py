@@ -3,7 +3,7 @@ from backpack.models.user import User
 from backpack.models.profile.profile import Profile
 from backpack.models.follow import Follow
 from backpack.models.message import Message
-from backpack.utils import jwt
+from backpack.utils import jwt, pagination
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -37,7 +37,13 @@ def follow(following_id: str):
 def followers(user_id: str):
     try:        
         if request.method == "GET":
-            followers = [Profile.find_one(user_id=follow.follower_id).to_dict() for follow in Follow.find_all(following_id=user_id)]
+            page = request.args.get("page", None)
+            
+            limit, offset = None, None
+            if page:
+                limit, offset = pagination.get_page(int(page))
+
+            followers = [Profile.find_one(user_id=follow.follower_id).to_dict() for follow in Follow.find_all(limit=limit, offset=offset, following_id=user_id)]
             return jsonify(followers), 200
         
     except Exception as e:
@@ -49,7 +55,13 @@ def followers(user_id: str):
 def following(user_id: str):
     try:        
         if request.method == "GET":
-            followers = [Profile.find_one(user_id=follow.following_id).to_dict() for follow in Follow.find_all(follower_id=user_id)]
+            page = request.args.get("page", None)
+            
+            limit, offset = None, None
+            if page:
+                limit, offset = pagination.get_page(int(page))
+
+            followers = [Profile.find_one(user_id=follow.following_id).to_dict() for follow in Follow.find_all(limit=limit, offset=offset, follower_id=user_id)]
             return jsonify(followers), 200
         
     except Exception as e:
@@ -61,14 +73,20 @@ def following(user_id: str):
 def messages(participant_id: str):
     try:
         if request.method == "GET":
-            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            page = request.args.get("page", None)
+            
+            limit, offset = None, None
+            if page:
+                limit, offset = pagination.get_page(int(page))
 
+            user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
+            
             conversation: list[Message] = ( 
                 Message.select()
                 .where(sender_id=user_id, receiver_id=participant_id)
                 .or_where(sender_id=participant_id, receiver_id=user_id)
                 .order_by("created_at", descending=True)
-                .execute()
+                .execute(limit=limit, offset=offset)
             )
             messages = [message.to_dict(show_participants_id=True) for message in conversation]
             

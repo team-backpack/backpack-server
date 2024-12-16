@@ -5,6 +5,7 @@ from backpack.models.post.media import Media
 from backpack.models.profile.profile import Profile
 from backpack.models.post.like import Like
 from backpack.utils import jwt
+from backpack.utils import pagination
 
 bp = Blueprint("posts", __name__, url_prefix="/posts")
 
@@ -12,7 +13,13 @@ bp = Blueprint("posts", __name__, url_prefix="/posts")
 def posts():
     try:
         if request.method == "GET":
-            posts = [post.to_dict() for post in Post.find_all()]
+            page = request.args.get("page", None)
+            
+            limit, offset = None, None
+            if page:
+                limit, offset = pagination.get_page(int(page))
+                
+            posts = [post.to_dict() for post in Post.find_all(limit=limit, offset=offset)]
             return jsonify(posts), 200
     
         if request.method == "POST":

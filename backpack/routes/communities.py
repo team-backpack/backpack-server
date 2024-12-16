@@ -160,7 +160,7 @@ def participants(community_id: str):
     
 
 @bp.route("/<string:community_id>/participants/<string:participant_id>/", methods=["PATCH", "DELETE"])
-def participants(community_id: str, participant_id: str):
+def participant(community_id: str, participant_id: str):
     try:
         user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 
