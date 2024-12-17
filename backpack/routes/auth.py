@@ -49,7 +49,7 @@ def login():
             if not user.verified:
                 return jsonify({"error": "User is not verified"}), 403
 
-            response = make_response(jsonify({ "id": user.id }), 200)
+            response = make_response(jsonify(user.to_dict()), 200)
             response = jwt.set_jwt_cookie(response, user.id, user.username)
             return response
     
