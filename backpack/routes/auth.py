@@ -111,7 +111,7 @@ def register():
 
             emailing.send_verification_token(new_user.email, verification_token)
                 
-            response = make_response(jsonify({ "id": new_user.id }), 201)
+            response = make_response(jsonify(new_user.to_dict()), 201)
             response = jwt.set_jwt_cookie(response, new_user.id, new_user.id)
             return response
             
