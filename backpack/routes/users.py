@@ -11,8 +11,15 @@ bp = Blueprint("users", __name__, url_prefix="/users")
 def users():
     try:
         if request.method == "GET":
-            users = [user.to_dict() for user in User.find_all()]
-            return jsonify(users), 200
+            users = [user for user in User.find_all()]
+
+            response = []
+            for user in users:
+                result = user.to_dict()
+                result["profile"] = Profile.find_one(user_id=user.id).to_dict(show_user=False)
+                response.append(result)
+            
+            return jsonify(response), 200
         
     except Exception as e:
         print(e)
