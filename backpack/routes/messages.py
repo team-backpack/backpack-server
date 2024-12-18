@@ -16,7 +16,7 @@ def messages():
             messages: list[Message] = (
                 Message.select()
                 .where(operator="OR", sender_id=user_id, receiver_id=user_id)
-                .order_by("created_at")
+                .order_by("created_at", descending=True)
                 .execute()
             )
 
@@ -26,7 +26,7 @@ def messages():
                 other_id = message.sender_id if message.sender_id != user_id else message.receiver_id
 
                 if other_id not in conversations:
-                    profile = Profile.find_one(id=other_id)
+                    profile = Profile.find_one(user_id=other_id)
                     conversations[other_id] = {
                         "participant": profile.to_dict() if profile else User.find_one(id=other_id).to_dict(),
                         "lastMessage": None,

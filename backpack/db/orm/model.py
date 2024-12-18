@@ -4,6 +4,7 @@ from enum import Enum
 from uuid import uuid4
 import nanoid
 from datetime import date, datetime
+import pytz
 
 class GenerationStrategy(Enum):
     UUID = uuid4
@@ -11,7 +12,7 @@ class GenerationStrategy(Enum):
     INCREMENT = None
 
 def NOW():
-    return datetime.now()
+    return datetime.now(tz=pytz.utc)
 
 def TODAY():
     return date.today()

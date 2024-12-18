@@ -48,8 +48,11 @@ def login():
             
             if not user.verified:
                 return jsonify({"error": "User is not verified"}), 403
+            
+            res = user.to_dict()
+            res["profile"] = Profile.find_one(user_id=user.id).to_dict(show_user=False)
 
-            response = make_response(jsonify(user.to_dict()), 200)
+            response = make_response(jsonify(res), 200)
             response = jwt.set_jwt_cookie(response, user.id, user.username)
             return response
     
@@ -107,11 +110,14 @@ def register():
             verification_token = new_user.generate_verification_token()
 
             new_user.insert()
-            Profile(user_id=new_user.id).insert()
+            Profile(user_id=new_user.id, display_name=new_user.username).insert()
 
             emailing.send_verification_token(new_user.email, verification_token)
+
+            res = new_user.to_dict()
+            res["profile"] = Profile.find_one(user_id=new_user.id).to_dict(show_user=False)
                 
-            response = make_response(jsonify(new_user.to_dict()), 201)
+            response = make_response(jsonify(res), 201)
             response = jwt.set_jwt_cookie(response, new_user.id, new_user.id)
             return response
             

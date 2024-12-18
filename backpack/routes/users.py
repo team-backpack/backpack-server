@@ -19,6 +19,22 @@ def users():
         return jsonify({ "error": "Internal Server Error" }), 500
     
 
+@bp.route("/<string:user_id>/", methods=["GET"])
+def user(user_id: str):
+    try:
+        if request.method == "GET":
+            user = User.find_one(id=user_id)
+            
+            response = user.to_dict()
+            response["profile"] = Profile.find_one(user_id=user_id).to_dict(show_user=False)
+
+            return jsonify(response), 200
+        
+    except Exception as e:
+        print(e)
+        return jsonify({ "error": "Internal Server Error" }), 500
+    
+
 @bp.route("/<string:following_id>/follow/", methods=["POST"])
 def follow(following_id: str):
     try:        
@@ -104,7 +120,7 @@ def messages(participant_id: str):
             message = Message(sender_id=user_id, receiver_id=participant_id, text=text)
             message.insert()
             
-            return jsonify(message.to_dict()), 201
+            return jsonify(message.to_dict(show_participants_id=True)), 201
     
     except Exception as e:
         print(e)

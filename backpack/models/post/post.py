@@ -34,7 +34,7 @@ class Post(Model):
 
         super().__init__(user_id=user_id, text=text, is_repost=is_repost, reposted_id=reposted_id, commented_id=commented_id, repost_type=repost_type)
 
-    def to_dict(self, show_profile: bool = True):
+    def to_dict(self, show_profile: bool = True, show_commented: bool = False, show_reposted: bool = False, show_parents_ids: bool = True):
         if self.repost_type == "simple":
             result = {
                 "postId": self.id,
@@ -54,13 +54,21 @@ class Post(Model):
                 "wasEditedAt": self.was_edited_at,
                 "isRepost": self.is_repost,
                 "repostType": self.repost_type,
-                "reposted": self.find_one(id=self.reposted_id).to_dict() if self.reposted_id else None,
-                "commented": self.find_one(id=self.commented_id).to_dict() if self.commented_id else None,
                 "createdAt": self.created_at,
                 "updatedAt": self.updated_at
             }
 
         if show_profile:
             result["profile"] = Profile.find_one(user_id=self.user_id).to_dict()
+        
+        if show_reposted:
+            result["reposted"] = self.find_one(id=self.reposted_id).to_dict() if self.reposted_id else None
+
+        if show_commented:
+            result["commented"] = self.find_one(id=self.commented_id).to_dict() if self.commented_id else None
+
+        if show_parents_ids:
+            result["repostedId"] = self.reposted_id
+            result["commentedId"] = self.commented_id
 
         return result
