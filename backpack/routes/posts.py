@@ -53,7 +53,7 @@ def post(post_id: str):
         if request.method == "GET":
             post = Post.find_one(id=post_id)
             if not post:
-                return jsonify({"error": "Post not found"}), 404
+                return jsonify({"error": "Post não encontrado"}), 404
             
             response = post.to_dict()
 
@@ -216,7 +216,7 @@ def comments(post_id: str):
 
             commented = Post.find_one(id=post_id)
             if not commented:
-                return jsonify({"error": "Commented post not found"}), 404
+                return jsonify({"error": "Post comentado não encontrado"}), 404
             
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 

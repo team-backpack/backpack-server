@@ -120,7 +120,7 @@ def messages(participant_id: str):
 
             text = data.get("text")
             if not text:
-                return jsonify({ "error": "Cannot send message without content" }), 200
+                return jsonify({ "error": "Mensagem sem conteúdo" }), 200
 
             user_id = jwt.get_current_user_id(request.cookies.get("jwt"))
 

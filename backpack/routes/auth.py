@@ -39,15 +39,15 @@ def login():
             user = User.find_one(username=username) if username else User.find_one(email=email)
 
             if not user:
-                return jsonify({"error": "User not found"}), 404
+                return jsonify({"error": "Usuário não encontrado"}), 404
             
             is_password_correct = hashing.check(password, user.password)
 
             if not is_password_correct or not (user.username == username or user.email == email):
-                return jsonify({"error": "Incorrect credentials"}), 401
+                return jsonify({"error": "Credenciais incorretas"}), 401
             
             if not user.verified:
-                return jsonify({"error": "User is not verified"}), 403
+                return jsonify({"error": "Usuário verificado"}), 403
             
             res = user.to_dict()
             res["profile"] = Profile.find_one(user_id=user.id).to_dict(show_user=False)
@@ -77,7 +77,7 @@ def register():
                 return jsonify({"error": "Missing fields"}), 400
 
             if not validation.is_name_valid(username):
-                return jsonify({"error": "Invalid username"}), 400
+                return jsonify({"error": "Username inválido"}), 400
             
             try:
                 email_validator.validate_email(email)
@@ -85,15 +85,15 @@ def register():
                 return jsonify({"error": f"{e}"}), 400
             
             if password != confirmed_password:
-                return jsonify({ "error": "Passwords do not match" }), 400
+                return jsonify({ "error": "As senhas não batem" }), 400
             
             user = User.find_one(username=username)
             if user:
-                return jsonify({ "error": "Username already in use" }), 400
+                return jsonify({ "error": "Username já está sem uso" }), 400
             
             user = User.find_one(email=email)
             if user:
-                return jsonify({ "error": "Unavailable email" }), 400
+                return jsonify({ "error": "E-mail indisponível" }), 400
             
             try:
                 birth_date = date.fromisoformat(birth_date)
@@ -102,7 +102,7 @@ def register():
             
             permited_age_in_days = 13 * 365
             if (date.today() - birth_date).days < permited_age_in_days:
-                return jsonify({ "error": "User too young" }), 400
+                return jsonify({ "error": "Usuário muito novo. Deve ter mais de 13 anos" }), 400
             
             password = hashing.hash(password)
             
@@ -137,16 +137,16 @@ def verify(user_id: str):
 
             user: User = User.find_one(id=user_id)
             if not user:
-                return jsonify({"error": "User not found"}), 404
+                return jsonify({"error": "Usuário não encontrado"}), 404
 
             if user.verified:
-                return jsonify({"error": "User is already verified"}), 400
+                return jsonify({"error": "Usuário já está verificado"}), 400
 
             if user.verification_token != verification_token:
-                return jsonify({ "error": "Invalid verification token" }), 400
+                return jsonify({ "error": "Código de verificação inválido" }), 400
             
             if is_verification_token_expired(user.token_sent_at):
-                return jsonify({ "error": "Verification token expired" }), 400
+                return jsonify({ "error": "Código de verificação expirado" }), 400
             
             user.verified = True
             user.update()
